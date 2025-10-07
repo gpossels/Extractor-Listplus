@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador de Incidentes</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .step {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .step h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            background: #f0f2ff;
+        }
+        
+        .upload-area.loaded {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 14px;
+        }
+        
+        select, button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        select {
+            background: white;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        
+        .preview {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #333;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .action-buttons button {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Analizador de Incidentes</h1>
+        
+        <div class="step">
+            <h2>Paso 1: Cargar Archivo Excel</h2>
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                <div id="uploadText">
+                    📁 Haz clic aquí o arrastra tu archivo Excel<br>
+                    <small>Se eliminarán automáticamente los duplicados en columna B (ID. Evento)</small>
+                </div>
+            </div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls">
+            <div id="fileInfo" class="info-box" style="display:none;"></div>
+        </div>
+
+        <div class="step" id="analysisStep" style="display:none;">
+            <h2>Paso 2: Configurar Análisis</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label>Periodo de análisis:</label>
+                    <select id="periodType">
+                        <option value="year">Año</option>
+                        <option value="semester">Semestre</option>
+                        <option value="quarter4">Cuatrimestre</option>
+                        <option value="quarter">Trimestre</option>
+                        <option value="month" selected>Mes</option>
+                        <option value="week">Semana</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Fecha a utilizar:</label>
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:5px;">
+                        <label style="font-weight:normal; display:flex; align-items:center; gap:8px;">
+                            <input type="radio" name="dateType" value="occurrence">
+                            Fecha de Ocurrencia (Col D)
+                        </label>
+                        <label style="font-weight:normal; display:flex; align-items:center; gap:8px;">
+                            <input type="radio" name="dateType" value="notification" checked>
+                            Fecha de Notificación (Col E)
+                        </label>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Orientación de tabla:</label>
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:5px;">
+                        <label style="font-weight:normal; display:flex; align-items:center; gap:8px;">
+                            <input type="radio" name="orientation" value="rows" checked>
+                            Periodos como filas
+                        </label>
+                        <label style="font-weight:normal; display:flex; align-items:center; gap:8px;">
+                            <input type="radio" name="orientation" value="cols">
+                            Periodos como columnas
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <button onclick="analyzeData()" style="width:100%; margin-top:15px;">🔍 Generar Análisis</button>
+        </div>
+
+        <div id="resultsStep" style="display:none;">
+            <div class="step">
+                <h2>Paso 3: Resultados</h2>
+                <div id="statsContainer" class="stats"></div>
+                <div id="previewContainer" class="preview"></div>
+                <div class="action-buttons">
+                    <button onclick="downloadExcel()">📥 Descargar Excel</button>
+                    <button onclick="resetAnalysis()">🔄 Nuevo Análisis</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let workbook = null;
+        let cleanedData = null;
+        let analysisResults = null;
+
+        document.getElementById('fileInput').addEventListener('change', handleFile);
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                processFile();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processFile() {
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+            
+            if (jsonData.length < 2) {
+                alert('El archivo no contiene datos suficientes');
+                return;
+            }
+
+            const headers = jsonData[0];
+            const rows = jsonData.slice(1);
+            
+            // Eliminar duplicados por columna B (índice 1)
+            const seen = new Set();
+            const uniqueRows = rows.filter(row => {
+                const id = row[1];
+                if (!id || seen.has(id)) {
+                    return false;
+                }
+                seen.add(id);
+                return true;
+            });
+
+            cleanedData = {
+                headers: headers,
+                rows: uniqueRows
+            };
+
+            const uploadArea = document.getElementById('uploadArea');
+            uploadArea.classList.add('loaded');
+            document.getElementById('uploadText').innerHTML = '✅ Archivo cargado correctamente';
+            
+            const info = document.getElementById('fileInfo');
+            info.style.display = 'block';
+            info.innerHTML = `
+                <strong>Información del archivo:</strong><br>
+                • Filas originales: ${rows.length}<br>
+                • Duplicados eliminados: ${rows.length - uniqueRows.length}<br>
+                • Filas únicas: ${uniqueRows.length}
+            `;
+
+            document.getElementById('analysisStep').style.display = 'block';
+        }
+
+        function parseDate(dateStr) {
+            if (!dateStr) return null;
+            
+            // Si ya es un objeto Date
+            if (dateStr instanceof Date) return dateStr;
+            
+            // Intentar parsear diferentes formatos
+            const formats = [
+                // dd-mm-yyyy o dd/mm/yyyy
+                /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/,
+                // yyyy-mm-dd
+                /^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/
+            ];
+            
+            for (let format of formats) {
+                const match = String(dateStr).match(format);
+                if (match) {
+                    if (match[1].length === 4) {
+                        // yyyy-mm-dd
+                        return new Date(match[1], match[2] - 1, match[3]);
+                    } else {
+                        // dd-mm-yyyy
+                        return new Date(match[3], match[2] - 1, match[1]);
+                    }
+                }
+            }
+            
+            // Último intento con Date.parse
+            const date = new Date(dateStr);
+            return isNaN(date.getTime()) ? null : date;
+        }
+
+        function getWeekNumber(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+            return { year: d.getUTCFullYear(), week: weekNo };
+        }
+
+        function getPeriodKey(date, periodType) {
+            if (!date) return 'Sin fecha';
+            
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            
+            switch(periodType) {
+                case 'year':
+                    return `${year}`;
+                case 'semester':
+                    const semester = month <= 6 ? 1 : 2;
+                    return `${year}-S${semester}`;
+                case 'quarter4':
+                    const quarter4 = Math.ceil(month / 4);
+                    return `${year}-C${quarter4}`;
+                case 'quarter':
+                    const quarter = Math.ceil(month / 3);
+                    return `${year}-T${quarter}`;
+                case 'month':
+                    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    return `${year}-${monthNames[month - 1]}`;
+                case 'week':
+                    const { year: weekYear, week } = getWeekNumber(date);
+                    return `${weekYear}-Sem${String(week).padStart(2, '0')}`;
+                default:
+                    return 'Desconocido';
+            }
+        }
+
+        function analyzeData() {
+            const periodType = document.getElementById('periodType').value;
+            const dateType = document.querySelector('input[name="dateType"]:checked').value;
+            const orientation = document.querySelector('input[name="orientation"]:checked').value;
+            
+            const dateColIndex = dateType === 'occurrence' ? 3 : 4; // D=3, E=4
+            const classificationColIndex = 21; // V es la columna 22 (índice 21)
+            
+            const classifications = ['Descarte', 'Incidente', 'Near Miss', 'Adverso', 'Centinela'];
+            const periodData = {};
+            
+            cleanedData.rows.forEach(row => {
+                const dateStr = row[dateColIndex];
+                const classification = row[classificationColIndex];
+                
+                const date = parseDate(dateStr);
+                const period = getPeriodKey(date, periodType);
+                
+                if (!periodData[period]) {
+                    periodData[period] = {
+                        'Descarte': 0,
+                        'Incidente': 0,
+                        'Near Miss': 0,
+                        'Adverso': 0,
+                        'Centinela': 0,
+                        'TOTAL': 0
+                    };
+                }
+                
+                if (classifications.includes(classification)) {
+                    periodData[period][classification]++;
+                    periodData[period]['TOTAL']++;
+                } else if (classification) {
+                    // Contar otros tipos también
+                    periodData[period]['TOTAL']++;
+                }
+            });
+            
+            // Ordenar periodos
+            const sortedPeriods = Object.keys(periodData).sort();
+            
+            analysisResults = {
+                periodType,
+                dateType,
+                orientation,
+                periodData,
+                sortedPeriods,
+                classifications
+            };
+            
+            displayResults();
+        }
+
+        function displayResults() {
+            const { periodData, sortedPeriods, classifications, orientation } = analysisResults;
+            
+            // Calcular estadísticas generales
+            let totalEvents = 0;
+            const classificationTotals = {};
+            classifications.forEach(c => classificationTotals[c] = 0);
+            
+            sortedPeriods.forEach(period => {
+                totalEvents += periodData[period]['TOTAL'];
+                classifications.forEach(c => {
+                    classificationTotals[c] += periodData[period][c];
+                });
+            });
+            
+            // Mostrar estadísticas
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-value">${totalEvents}</div>
+                    <div class="stat-label">Total Eventos</div>
+                </div>
+                ${classifications.map(c => `
+                    <div class="stat-card">
+                        <div class="stat-value">${classificationTotals[c]}</div>
+                        <div class="stat-label">${c}</div>
+                    </div>
+                `).join('')}
+            `;
+            document.getElementById('statsContainer').innerHTML = statsHtml;
+            
+            // Generar tabla
+            let tableHtml = '<table>';
+            
+            if (orientation === 'rows') {
+                // Periodos como filas
+                tableHtml += '<thead><tr><th>Periodo</th>';
+                classifications.forEach(c => tableHtml += `<th>${c}</th>`);
+                tableHtml += '<th>TOTAL</th></tr></thead><tbody>';
+                
+                sortedPeriods.forEach(period => {
+                    tableHtml += `<tr><td><strong>${period}</strong></td>`;
+                    classifications.forEach(c => {
+                        tableHtml += `<td>${periodData[period][c]}</td>`;
+                    });
+                    tableHtml += `<td><strong>${periodData[period]['TOTAL']}</strong></td></tr>`;
+                });
+                
+                // Fila de totales
+                tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>';
+                classifications.forEach(c => {
+                    tableHtml += `<td>${classificationTotals[c]}</td>`;
+                });
+                tableHtml += `<td>${totalEvents}</td></tr>`;
+                
+            } else {
+                // Periodos como columnas
+                tableHtml += '<thead><tr><th>Clasificación</th>';
+                sortedPeriods.forEach(p => tableHtml += `<th>${p}</th>`);
+                tableHtml += '<th>TOTAL</th></tr></thead><tbody>';
+                
+                classifications.forEach(c => {
+                    tableHtml += `<tr><td><strong>${c}</strong></td>`;
+                    sortedPeriods.forEach(period => {
+                        tableHtml += `<td>${periodData[period][c]}</td>`;
+                    });
+                    tableHtml += `<td><strong>${classificationTotals[c]}</strong></td></tr>`;
+                });
+                
+                // Fila de totales
+                tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>';
+                sortedPeriods.forEach(period => {
+                    tableHtml += `<td>${periodData[period]['TOTAL']}</td>`;
+                });
+                tableHtml += `<td>${totalEvents}</td></tr>`;
+            }
+            
+            tableHtml += '</tbody></table>';
+            document.getElementById('previewContainer').innerHTML = tableHtml;
+            document.getElementById('resultsStep').style.display = 'block';
+            document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function downloadExcel() {
+            const { periodData, sortedPeriods, classifications, orientation } = analysisResults;
+            
+            const wb = XLSX.utils.book_new();
+            let wsData = [];
+            
+            if (orientation === 'rows') {
+                // Header
+                wsData.push(['Periodo', ...classifications, 'TOTAL']);
+                
+                // Data rows
+                sortedPeriods.forEach(period => {
+                    const row = [period];
+                    classifications.forEach(c => row.push(periodData[period][c]));
+                    row.push(periodData[period]['TOTAL']);
+                    wsData.push(row);
+                });
+                
+                // Totals row
+                const totalRow = ['TOTAL'];
+                classifications.forEach(c => {
+                    const total = sortedPeriods.reduce((sum, p) => sum + periodData[p][c], 0);
+                    totalRow.push(total);
+                });
+                const grandTotal = sortedPeriods.reduce((sum, p) => sum + periodData[p]['TOTAL'], 0);
+                totalRow.push(grandTotal);
+                wsData.push(totalRow);
+                
+            } else {
+                // Header
+                wsData.push(['Clasificación', ...sortedPeriods, 'TOTAL']);
+                
+                // Data rows
+                classifications.forEach(c => {
+                    const row = [c];
+                    sortedPeriods.forEach(period => row.push(periodData[period][c]));
+                    const total = sortedPeriods.reduce((sum, p) => sum + periodData[p][c], 0);
+                    row.push(total);
+                    wsData.push(row);
+                });
+                
+                // Totals row
+                const totalRow = ['TOTAL'];
+                sortedPeriods.forEach(period => totalRow.push(periodData[period]['TOTAL']));
+                const grandTotal = sortedPeriods.reduce((sum, p) => sum + periodData[p]['TOTAL'], 0);
+                totalRow.push(grandTotal);
+                wsData.push(totalRow);
+            }
+            
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, 'Resumen por Periodo');
+            
+            XLSX.writeFile(wb, 'Analisis_Incidentes.xlsx');
+        }
+
+        function resetAnalysis() {
+            document.getElementById('resultsStep').style.display = 'none';
+            document.getElementById('analysisStep').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
