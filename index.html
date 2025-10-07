@@ -453,12 +453,17 @@
             const dateColIndex = dateType === 'occurrence' ? 3 : 4; // D=3, E=4
             const classificationColIndex = 21; // V es la columna 22 (índice 21)
             
-            const classifications = ['Descarte', 'Incidente', 'Near Miss', 'Adverso', 'Centinela'];
+            const classifications = ['Descarte', 'Incidente', 'Near Miss', 'Adverso', 'Centinela', 'Sin clasificación'];
             const periodData = {};
             
             cleanedData.rows.forEach(row => {
                 const dateStr = row[dateColIndex];
-                const classification = row[classificationColIndex];
+                let classification = row[classificationColIndex];
+                
+                // Si la clasificación está vacía, asignar "Sin clasificación"
+                if (!classification || classification.toString().trim() === '') {
+                    classification = 'Sin clasificación';
+                }
                 
                 const date = parseDate(dateStr);
                 const period = getPeriodKey(date, periodType);
@@ -470,6 +475,7 @@
                         'Near Miss': 0,
                         'Adverso': 0,
                         'Centinela': 0,
+                        'Sin clasificación': 0,
                         'TOTAL': 0
                     };
                 }
@@ -477,8 +483,8 @@
                 if (classifications.includes(classification)) {
                     periodData[period][classification]++;
                     periodData[period]['TOTAL']++;
-                } else if (classification) {
-                    // Contar otros tipos también
+                } else {
+                    // Contar otros tipos en TOTAL
                     periodData[period]['TOTAL']++;
                 }
             });
