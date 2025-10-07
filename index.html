@@ -652,8 +652,8 @@
             // Obtener todas las celdas de esa columna
             const cells = document.querySelectorAll(`td[data-col="${columnName}"]`);
             
-            // Extraer los valores
-            const values = Array.from(cells).map(cell => cell.textContent.trim());
+            // Extraer los valores, excluyendo el último (que es el total)
+            const values = Array.from(cells).slice(0, -1).map(cell => cell.textContent.trim());
             
             // Copiar al portapapeles
             const text = values.join('\n');
