@@ -198,7 +198,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>📊 Analizador de Incidentes</h1>
+        <h1>📊 Extractor de Indicadores de Calidad</h1>
         
         <div class="step">
             <h2>Paso 1: Cargar Archivo Excel</h2>
