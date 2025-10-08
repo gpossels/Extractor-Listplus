@@ -494,7 +494,8 @@ function findColumnIndex(headers, possibleNames) {
             const missing = [];
 
             for (let [key, names] of Object.entries(requiredColumns)) {
-                const index = findColumnIndex(headers, names);
+                const exactMatch = (key === 'eventType');
+                const index = findColumnIndex(headers, names, exactMatch);
                 if (index === -1) {
                     missing.push(names[0]);
                 } else {
