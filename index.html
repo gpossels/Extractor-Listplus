@@ -921,7 +921,7 @@ function parseDate(dateStr) {
             document.getElementById('resultsStep').style.display = 'block';
             document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
         }
-        
+    
         function displayAdditionalAnalysis() {
             const { sortedPeriods, classifications, serviceClassificationData, serviceEventData, vigilanceData, serviceComparisonData } = analysisResults;
             
@@ -1051,54 +1051,9 @@ function parseDate(dateStr) {
                 </div>
             `;
             
-            sortedPeriods.forEach(period => {
-                html += `
-                    <tr>
-                        <td><strong>${period}</strong></td>
-                        <td>${vigilanceData[period].Pasiva}</td>
-                        <td>${vigilanceData[period].Activa}</td>
-                        <td>${vigilanceData[period].Otros}</td>
-                        <td><strong>${vigilanceData[period].TOTAL}</strong></td>
-                    </tr>
-                `;
-            });
             
-            html += `
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
                         
-            sortedPeriods.forEach(period => {
-                const services = Object.keys(serviceComparisonData[period] || {}).sort();
-                services.forEach(service => {
-                    const data = serviceComparisonData[period][service];
-                    const verifiedAsSame = data.verified[service] || 0;
-                    const percentage = data.reported > 0 ? ((data.matches / data.reported) * 100).toFixed(1) : '0.0';
-                    
-                    html += `
-                        <tr>
-                            <td>${period}</td>
-                            <td><strong>${service}</strong></td>
-                            <td>${data.reported}</td>
-                            <td>${verifiedAsSame}</td>
-                            <td>${data.matches}</td>
-                            <td>${percentage}%</td>
-                        </tr>
-                    `;
-                });
-            });
-            
-            html += `
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
+                        
             return html;
         }
         
