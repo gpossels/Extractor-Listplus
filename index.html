@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analizador de Incidentes</title>
+    <title>Extractor de Datos Planilla Listplus</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
@@ -322,7 +322,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>📊 Analizador de Incidentes</h1>
+        <h1>Extractor de Datos Planilla Listplus</h1>
         
         <div class="step">
             <h2>Paso 1: Cargar Archivo Excel</h2>
@@ -965,14 +965,7 @@ function parseDate(dateStr) {
                 });
             });
             
-            html += `
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
+                       
             // 2. Servicio por Evento
             const allServices = Object.keys(serviceEventData).sort();
             const allEvents = new Set();
