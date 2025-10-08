@@ -658,6 +658,39 @@ function parseDate(dateStr) {
             }
         }
 
+            function sortPeriods(periods, periodType) {
+            return periods.sort((a, b) => {
+                // Extraer año y otros componentes
+                const parseA = a.split('-');
+                const parseB = b.split('-');
+                
+                // Comparar año primero
+                const yearA = parseInt(parseA[0]) || 0;
+                const yearB = parseInt(parseB[0]) || 0;
+                
+                if (yearA !== yearB) {
+                    return yearA - yearB;
+                }
+                
+                // Si es por mes, ordenar por número de mes
+                if (periodType === 'month' && parseA.length > 1) {
+                    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    const monthA = monthNames.indexOf(parseA[1]);
+                    const monthB = monthNames.indexOf(parseB[1]);
+                    return monthA - monthB;
+                }
+                
+                // Para semestre, trimestre, cuatrimestre, semana - ordenar por número
+                if (parseA.length > 1) {
+                    const numA = parseInt(parseA[1].replace(/\D/g, '')) || 0;
+                    const numB = parseInt(parseB[1].replace(/\D/g, '')) || 0;
+                    return numA - numB;
+                }
+                
+                return 0;
+            });
+        }
+        
             function analyzeData() {
                 try {
                     showLoading('Analizando datos...');
@@ -804,7 +837,7 @@ function parseDate(dateStr) {
             });
             
             // Ordenar periodos
-            const sortedPeriods = Object.keys(periodData).sort();
+            const sortedPeriods = sortPeriods(Object.keys(periodData), periodType);
             
             analysisResults = {
                 periodType,
