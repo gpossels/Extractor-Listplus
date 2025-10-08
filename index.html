@@ -530,7 +530,11 @@ function findColumnIndex(headers, possibleNames) {
         function processFile() {
             try {
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: false, dateNF: 'dd-mm-yyyy' });
+               const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
+    header: 1, 
+    raw: false,
+    cellDates: true  // Esto hace que las fechas se devuelvan como objetos Date
+});
                 
                 if (jsonData.length < 2) {
                     hideLoading();
@@ -592,34 +596,46 @@ function findColumnIndex(headers, possibleNames) {
 function parseDate(dateStr) {
     if (!dateStr) return null;
     
+    // Si ya es un objeto Date válido
     if (dateStr instanceof Date && !isNaN(dateStr)) {
-        // Create date at midnight in local time
         return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate());
     }
     
-    // Try DD-MM-YYYY or D-M-YYYY format (flexible with 1 or 2 digits)
-    const match = String(dateStr).match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+    // Si es un string, intentar parsearlo
+    const dateString = String(dateStr).trim();
+    
+    // Formato DD-MM-YYYY o D-M-YYYY
+    const match = dateString.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
     if (match) {
         const day = parseInt(match[1]);
         const month = parseInt(match[2]) - 1;
         const year = parseInt(match[3]);
         
-        // Validate ranges
-        if (month < 0 || month > 11 || day < 1 || day > 31) {
-            return null;
+        if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+            return new Date(year, month, day);
         }
-        
-        return new Date(year, month, day);
     }
-    
-    // Try parsing as ISO or other standard formats
-    const date = new Date(dateStr);
+    const dateStr = row[dateColIndex];
+
+// DEBUG - eliminar después
+if (index < 5) {
+    console.log(`Fila ${index}:`, {
+        raw: dateStr,
+        type: typeof dateStr,
+        isDate: dateStr instanceof Date,
+        parsed: parseDate(dateStr),
+        periodKey: getPeriodKey(parseDate(dateStr), periodType)
+    });
+}
+    // Intentar parseo estándar
+    const date = new Date(dateString);
     if (!isNaN(date.getTime())) {
         return new Date(date.getFullYear(), date.getMonth(), date.getDate());
     }
     
     return null;
-}        function getWeekNumber(date) {
+}       
+        function getWeekNumber(date) {
             // Calcular en zona horaria de Chile
             const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
             const dayNum = d.getDay() || 7;
