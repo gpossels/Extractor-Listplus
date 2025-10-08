@@ -556,28 +556,30 @@ function findColumnIndex(headers, possibleNames) {
         }
         
        function parseDate(dateStr) {
-            if (!dateStr) return null;
-            
-            // Si ya es un objeto Date
-            if (dateStr instanceof Date) {
-                // Ajustar a zona horaria de Chile continental (UTC-3 o UTC-4, usamos UTC-4)
-                return new Date(dateStr.getTime() - (dateStr.getTimezoneOffset() * 60000));
-            }
-            
-            // Formato DD-MM-YYYY o DD/MM/YYYY (primeros 2 dígitos siempre son día, segundos 2 son mes)
-            const match = String(dateStr).match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
-            if (match) {
-                const day = parseInt(match[1]);
-                const month = parseInt(match[2]) - 1; // JavaScript months are 0-indexed
-                const year = parseInt(match[3]);
-                // Crear fecha en zona horaria de Chile (UTC-4)
-                return new Date(year, month, day);
-            }
-            
-            // Último intento con Date.parse
-            const date = new Date(dateStr);
-            return isNaN(date.getTime()) ? null : date;
+    if (!dateStr) return null;
+    
+    if (dateStr instanceof Date && !isNaN(dateStr)) {
+        // Create date at midnight in local time
+        return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate());
+    }
+    
+    // DD-MM-YYYY format (explicit Chilean format)
+    const match = String(dateStr).match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})$/);
+    if (match) {
+        const day = parseInt(match[1]);
+        const month = parseInt(match[2]) - 1;
+        const year = parseInt(match[3]);
+        
+        // Validate ranges
+        if (month < 0 || month > 11 || day < 1 || day > 31) {
+            return null;
         }
+        
+        return new Date(year, month, day);
+    }
+    
+    return null;
+}
         function getWeekNumber(date) {
             // Calcular en zona horaria de Chile
             const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
