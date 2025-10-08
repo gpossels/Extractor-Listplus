@@ -479,54 +479,64 @@ function findColumnIndex(headers, possibleNames) {
         }
 
         function validateHeaders(headers) {
-            const requiredColumns = {
-                eventId: ['id. evento', 'id evento'],
-                occurrenceDate: ['fecha de ocurrencia', 'fecha ocurrencia', 'ocurrencia'],
-                notificationDate: ['fecha de notificación', 'fecha notificación', 'notificación', 'fecha notificacion', 'notificacion'],
-                classification: ['clasificación', 'clasificacion'],
-                serviceReported: ['servicio ocurrencia'],
-                serviceVerified: ['servicio de ocurrencia'],
-                vigilanceType: ['tipo de vigilancia'],
-                eventType: ['evento']
-            };
+    const requiredColumns = {
+        eventId: ['id. evento', 'id evento'],
+        occurrenceDate: ['fecha de ocurrencia', 'fecha ocurrencia'],
+        notificationDate: ['fecha de notificación', 'fecha notificación', 'notificación', 'fecha notificacion', 'notificacion'],
+        classification: ['clasificación', 'clasificacion'],
+        serviceReported: ['servicio ocurrencia'],
+        serviceVerified: ['servicio de ocurrencia'],
+        vigilanceType: ['tipo de vigilancia'],
+        eventType: ['evento']
+    };
 
-            const indices = {};
-            const missing = [];
+    const indices = {};
+    const missing = [];
 
-            // Buscar eventType PRIMERO con coincidencia exacta
-            let eventTypeIndex = -1;
+    // Buscar cada columna
+    for (let [key, names] of Object.entries(requiredColumns)) {
+        let index = -1;
+        
+        // Para eventType, buscar coincidencia exacta
+        if (key === 'eventType') {
             for (let i = 0; i < headers.length; i++) {
                 if (String(headers[i]).trim().toLowerCase() === 'evento') {
-                    eventTypeIndex = i;
+                    index = i;
                     break;
                 }
             }
-            
-            // Luego buscar el resto normalmente
-            for (let [key, names] of Object.entries(requiredColumns)) {
-                let index;
-                if (key === 'eventType') {
-                    index = eventTypeIndex;
-                } else {
-                    index = findColumnIndex(headers, names);
-                }
-                
-                if (index === -1) {
-                    missing.push(names[0]);
-                } else {
-                    indices[key] = index;
+        } 
+        // Para occurrenceDate, buscar coincidencia EXACTA también
+        else if (key === 'occurrenceDate') {
+            for (let i = 0; i < headers.length; i++) {
+                const header = String(headers[i]).trim().toLowerCase();
+                if (header === 'fecha de ocurrencia' || header === 'fecha ocurrencia') {
+                    index = i;
+                    break;
                 }
             }
-            if (missing.length > 0) {
-                return {
-                    valid: false,
-                    message: `No se encontraron las siguientes columnas requeridas:<br>• ${missing.join('<br>• ')}<br><br>Nota: Se buscan "Servicio Ocurrencia" (debe aparecer 2 veces: columnas F y R)<br><br>Columnas encontradas: ${headers.join(', ')}`
-                };
-            }
-
-            return { valid: true, indices };
         }
+        // Para el resto, usar findColumnIndex
+        else {
+            index = findColumnIndex(headers, names);
+        }
+        
+        if (index === -1) {
+            missing.push(names[0]);
+        } else {
+            indices[key] = index;
+        }
+    }
+    
+    if (missing.length > 0) {
+        return {
+            valid: false,
+            message: `No se encontraron las siguientes columnas requeridas:<br>• ${missing.join('<br>• ')}<br><br>Columnas encontradas: ${headers.join(', ')}`
+        };
+    }
 
+    return { valid: true, indices };
+}
         function processFile() {
             try {
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
