@@ -493,9 +493,24 @@ function findColumnIndex(headers, possibleNames) {
             const indices = {};
             const missing = [];
 
+            // Buscar eventType PRIMERO con coincidencia exacta
+            let eventTypeIndex = -1;
+            for (let i = 0; i < headers.length; i++) {
+                if (String(headers[i]).trim().toLowerCase() === 'evento') {
+                    eventTypeIndex = i;
+                    break;
+                }
+            }
+            
+            // Luego buscar el resto normalmente
             for (let [key, names] of Object.entries(requiredColumns)) {
-                const exactMatch = (key === 'eventType');
-                const index = findColumnIndex(headers, names, exactMatch);
+                let index;
+                if (key === 'eventType') {
+                    index = eventTypeIndex;
+                } else {
+                    index = findColumnIndex(headers, names);
+                }
+                
                 if (index === -1) {
                     missing.push(names[0]);
                 } else {
