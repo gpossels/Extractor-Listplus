@@ -379,7 +379,7 @@
                     </div>
                 </div>
             </div>
-            <button onclick="analyzeData()" style="width:100%; margin-top:15px;">🔍 Generar Análisis</button>
+            <button onclick="analyzeData()" style="width:100%; margin-top:15px;">Extraer Datos</button>
         </div>
 
         <div id="resultsStep" style="display:none;">
@@ -954,18 +954,6 @@ function parseDate(dateStr) {
                 </div>
             `;
             
-            sortedPeriods.forEach(period => {
-                const services = Object.keys(serviceClassificationData[period] || {}).sort();
-                services.forEach(service => {
-                    html += `<tr><td>${period}</td><td><strong>${service}</strong></td>`;
-                    classifications.forEach(c => {
-                        html += `<td>${serviceClassificationData[period][service][c]}</td>`;
-                    });
-                    html += `<td><strong>${serviceClassificationData[period][service]['TOTAL']}</strong></td></tr>`;
-                });
-            });
-            
-                       
             // 2. Servicio por Evento
             const allServices = Object.keys(serviceEventData).sort();
             const allEvents = new Set();
