@@ -842,8 +842,16 @@ function parseDate(dateStr) {
             `;
             document.getElementById('statsContainer').innerHTML = statsHtml;
             
-            // Generar tabla
-            let tableHtml = '<table>';
+            // Generar tabla principal colapsable
+            let tableHtml = `
+                <div class="step collapsible-section">
+                    <h2 onclick="toggleSection('mainTable')" style="cursor:pointer;">
+                        <span id="icon-mainTable">▼</span> Análisis de Clasificaciones por Periodo
+                    </h2>
+                    <div id="mainTable" class="section-content" style="display:block;">
+                        <div class="preview">
+                            <table>
+            `;
             
            if (orientation === 'rows') {
                 // Periodos como filas
@@ -888,7 +896,14 @@ function parseDate(dateStr) {
                 tableHtml += `<td data-col="TOTAL">${totalEvents}</td></tr>`;
             }
             
-            tableHtml += '</tbody></table>';
+            tableHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            `;
+            
             document.getElementById('previewContainer').innerHTML = tableHtml;
             
            // Agregar análisis adicionales
