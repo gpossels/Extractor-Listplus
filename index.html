@@ -713,8 +713,14 @@ function parseDate(dateStr) {
             const vigilanceData = {};
             const serviceComparisonData = {};
             
-            cleanedData.rows.forEach(row => {
+            cleanedData.rows.forEach((row, index) => {
                 const dateStr = row[dateColIndex];
+                
+                // Debug: ver las primeras 5 fechas
+                if (index < 5) {
+                    console.log(`Fila ${index}: dateStr =`, dateStr, 'tipo:', typeof dateStr);
+                }
+                
                 let classification = row[classificationColIndex];
                 let serviceVerified = row[serviceVerifiedColIndex] || 'Sin servicio';
                 let serviceReported = row[serviceReportedColIndex] || 'Sin servicio';
