@@ -846,9 +846,9 @@ function parseDate(dateStr) {
             let tableHtml = `
                 <div class="step collapsible-section">
                     <h2 onclick="toggleSection('mainTable')" style="cursor:pointer;">
-                        <span id="icon-mainTable">▼</span> Análisis de Clasificaciones por Periodo
+                        <span id="icon-mainTable">▶</span> Tipo de Incidente por Periodo
                     </h2>
-                    <div id="mainTable" class="section-content" style="display:block;">
+                    <div id="mainTable" class="section-content" style="display:none;">
                         <div class="preview">
                             <table>
             `;
@@ -910,9 +910,12 @@ function parseDate(dateStr) {
             const additionalAnalysisHtml = displayAdditionalAnalysis();
             document.getElementById('previewContainer').innerHTML += additionalAnalysisHtml;
             
-            // Inicializar la tabla de servicio por evento con el primer servicio
+            // Inicializar las tablas con dropdown
             if (Object.keys(analysisResults.serviceEventData).length > 0) {
-                setTimeout(() => updateServiceEventTable(), 100);
+                setTimeout(() => {
+                    updateServiceClassificationTable();
+                    updateServiceEventTable();
+                }, 100);
             }
             
             document.getElementById('resultsStep').style.display = 'block';
@@ -924,24 +927,31 @@ function parseDate(dateStr) {
             
             let html = '';
             
-            // 1. Clasificación por Servicio
+            // 1. Incidentes por Servicio
+            const allServicesForClassification = new Set();
+            sortedPeriods.forEach(period => {
+                Object.keys(serviceClassificationData[period] || {}).forEach(service => {
+                    allServicesForClassification.add(service);
+                });
+            });
+            const sortedServicesForClassification = Array.from(allServicesForClassification).sort();
+            
             html += `
                 <div class="step collapsible-section">
                     <h2 onclick="toggleSection('section1')" style="cursor:pointer;">
-                        <span id="icon-section1">▶</span> Clasificación por Servicio de Ocurrencia Verificado por Calidad
+                        <span id="icon-section1">▶</span> Incidentes por Servicio
                     </h2>
                     <div id="section1" class="section-content" style="display:none;">
-                        <div class="preview">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Periodo</th>
-                                        <th>Servicio</th>
-                                        ${classifications.map(c => `<th>${c}</th>`).join('')}
-                                        <th>TOTAL</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                        <div class="control-group" style="margin-bottom: 20px;">
+                            <label>Seleccionar Servicio:</label>
+                            <select id="serviceClassificationSelector" onchange="updateServiceClassificationTable()">
+                                ${sortedServicesForClassification.map(service => `<option value="${service}">${service}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div id="serviceClassificationTableContainer" class="preview">
+                        </div>
+                    </div>
+                </div>
             `;
             
             sortedPeriods.forEach(period => {
@@ -1004,12 +1014,41 @@ function parseDate(dateStr) {
                                     <tr>
                                         <th>Periodo</th>
                                         <th>Pasiva</th>
+                                        <th>% Pasiva</th>
                                         <th>Activa</th>
-                                        <th>Otros</th>
-                                        <th>TOTAL</th>
+                                        <th>% Activa</th>
+                                        <th>Índice Activa/Pasiva</th>
                                     </tr>
                                 </thead>
                                 <tbody>
+            `;
+            
+            sortedPeriods.forEach(period => {
+                const pasiva = vigilanceData[period].Pasiva;
+                const activa = vigilanceData[period].Activa;
+                const total = vigilanceData[period].TOTAL;
+                const pctPasiva = total > 0 ? ((pasiva / total) * 100).toFixed(1) : '0.0';
+                const pctActiva = total > 0 ? ((activa / total) * 100).toFixed(1) : '0.0';
+                const indice = pasiva > 0 ? (activa / pasiva).toFixed(2) : 'N/A';
+                
+                html += `
+                    <tr>
+                        <td><strong>${period}</strong></td>
+                        <td>${pasiva}</td>
+                        <td>${pctPasiva}%</td>
+                        <td>${activa}</td>
+                        <td>${pctActiva}%</td>
+                        <td>${indice}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             `;
             
             sortedPeriods.forEach(period => {
@@ -1031,29 +1070,7 @@ function parseDate(dateStr) {
                     </div>
                 </div>
             `;
-            
-            // 4. Comparación de Servicios
-            html += `
-                <div class="step collapsible-section">
-                    <h2 onclick="toggleSection('section4')" style="cursor:pointer;">
-                        <span id="icon-section4">▶</span> Análisis de Coincidencia de Servicios
-                    </h2>
-                    <div id="section4" class="section-content" style="display:none;">
-                        <div class="preview">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Periodo</th>
-                                        <th>Servicio</th>
-                                        <th>Reportados (F)</th>
-                                        <th>Verificados como mismo (R)</th>
-                                        <th>Coincidencias</th>
-                                        <th>% Coincidencia</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-            `;
-            
+                        
             sortedPeriods.forEach(period => {
                 const services = Object.keys(serviceComparisonData[period] || {}).sort();
                 services.forEach(service => {
@@ -1162,7 +1179,68 @@ function parseDate(dateStr) {
             
             document.getElementById('serviceEventTableContainer').innerHTML = tableHtml;
         }
-        
+        function updateServiceClassificationTable() {
+            const selectedService = document.getElementById('serviceClassificationSelector').value;
+            const { sortedPeriods, classifications, serviceClassificationData } = analysisResults;
+            
+            let tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Periodo</th>
+                            ${classifications.map(c => `<th>${c}</th>`).join('')}
+                            <th>TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            sortedPeriods.forEach(period => {
+                const serviceData = serviceClassificationData[period] && serviceClassificationData[period][selectedService];
+                if (serviceData) {
+                    tableHtml += `<tr><td><strong>${period}</strong></td>`;
+                    classifications.forEach(c => {
+                        tableHtml += `<td>${serviceData[c]}</td>`;
+                    });
+                    tableHtml += `<td><strong>${serviceData['TOTAL']}</strong></td></tr>`;
+                } else {
+                    tableHtml += `<tr><td><strong>${period}</strong></td>`;
+                    classifications.forEach(c => {
+                        tableHtml += `<td>0</td>`;
+                    });
+                    tableHtml += `<td><strong>0</strong></td></tr>`;
+                }
+            });
+            
+            // Fila de totales
+            tableHtml += `<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>`;
+            classifications.forEach(c => {
+                let total = 0;
+                sortedPeriods.forEach(period => {
+                    const serviceData = serviceClassificationData[period] && serviceClassificationData[period][selectedService];
+                    if (serviceData) {
+                        total += serviceData[c];
+                    }
+                });
+                tableHtml += `<td>${total}</td>`;
+            });
+            
+            let grandTotal = 0;
+            sortedPeriods.forEach(period => {
+                const serviceData = serviceClassificationData[period] && serviceClassificationData[period][selectedService];
+                if (serviceData) {
+                    grandTotal += serviceData['TOTAL'];
+                }
+            });
+            tableHtml += `<td>${grandTotal}</td></tr>`;
+            
+            tableHtml += `
+                    </tbody>
+                </table>
+            `;
+            
+            document.getElementById('serviceClassificationTableContainer').innerHTML = tableHtml;
+        }
         function downloadExcel() {
             try {
                 showLoading('Generando archivo Excel...');
