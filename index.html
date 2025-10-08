@@ -543,6 +543,9 @@ function findColumnIndex(headers, possibleNames) {
                 }
 
                 const headers = jsonData[0];
+                console.log('TODAS LAS COLUMNAS:', headers);
+                console.log('Índice occurrenceDate encontrado:', columnIndices.occurrenceDate);
+                console.log('Nombre de esa columna:', headers[columnIndices.occurrenceDate]);
                 const validation = validateHeaders(headers);
 
                 if (!validation.valid) {
