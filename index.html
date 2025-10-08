@@ -330,7 +330,17 @@
                 <div id="uploadText">
                     📁 Haz clic aquí o arrastra tu archivo Excel<br>
                     <small>Se eliminarán automáticamente los duplicados en columna "ID. Evento"</small>
-                    
+                    <div style="margin-top: 15px; text-align: left; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+    <label style="font-weight: 600; margin-bottom: 8px; display: block;">Procesamiento de datos:</label>
+    <label style="font-weight:normal; display:flex; align-items:center; gap:8px;">
+        <input type="radio" name="duplicateHandling" value="remove" checked>
+        Eliminar duplicados (por ID. Evento)
+    </label>
+    <label style="font-weight:normal; display:flex; align-items:center; gap:8px;">
+        <input type="radio" name="duplicateHandling" value="keep">
+        Mantener todas las entradas
+    </label>
+</div>
                 </div>
             </div>
             <input type="file" id="fileInput" accept=".xlsx,.xls">
@@ -564,21 +574,33 @@ function findColumnIndex(headers, possibleNames) {
                 columnIndices = validation.indices;
                 const rows = jsonData.slice(1);
                 
-                // Eliminar duplicados por columna eventId
-                const seen = new Set();
-                const uniqueRows = rows.filter(row => {
-                    const id = row[columnIndices.eventId];
-                    if (!id || seen.has(id)) {
-                        return false;
-                    }
-                    seen.add(id);
-                    return true;
-                });
+                // Obtener opción de manejo de duplicados
+const duplicateHandling = document.querySelector('input[name="duplicateHandling"]:checked').value;
+
+let processedRows;
+let duplicatesRemoved = 0;
+
+if (duplicateHandling === 'remove') {
+    // Eliminar duplicados por columna eventId
+    const seen = new Set();
+    processedRows = rows.filter(row => {
+        const id = row[columnIndices.eventId];
+        if (!id || seen.has(id)) {
+            return false;
+        }
+        seen.add(id);
+        return true;
+    });
+    duplicatesRemoved = rows.length - processedRows.length;
+} else {
+    // Mantener todas las entradas
+    processedRows = rows;
+}
 
                 cleanedData = {
-                    headers: headers,
-                    rows: uniqueRows
-                };
+    headers: headers,
+    rows: processedRows
+};
 
                 const uploadArea = document.getElementById('uploadArea');
                 uploadArea.classList.add('loaded');
@@ -586,13 +608,22 @@ function findColumnIndex(headers, possibleNames) {
                 document.getElementById('uploadText').innerHTML = '✅ Archivo cargado correctamente';
                 
                 const info = document.getElementById('fileInfo');
-                info.style.display = 'block';
-                info.innerHTML = `
-                    <strong>Información del archivo:</strong><br>
-                    • Filas originales: ${rows.length}<br>
-                    • Duplicados eliminados: ${rows.length - uniqueRows.length}<br>
-                    • Filas únicas: ${uniqueRows.length}
-                `;
+info.style.display = 'block';
+
+if (duplicateHandling === 'remove') {
+    info.innerHTML = `
+        <strong>Información del archivo:</strong><br>
+        • Filas originales: ${rows.length}<br>
+        • Duplicados eliminados: ${duplicatesRemoved}<br>
+        • Filas únicas: ${processedRows.length}
+    `;
+} else {
+    info.innerHTML = `
+        <strong>Información del archivo:</strong><br>
+        • Total de filas procesadas: ${processedRows.length}<br>
+        • Modo: Todas las entradas mantenidas
+    `;
+}
 
                 document.getElementById('analysisStep').style.display = 'block';
                 hideLoading();
