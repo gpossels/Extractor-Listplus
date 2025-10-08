@@ -1010,11 +1010,11 @@ function parseDate(dateStr) {
                                 <thead>
                                     <tr>
                                         <th>Periodo</th>
-                                        <th>Pasiva</th>
                                         <th>% Pasiva</th>
-                                        <th>Activa</th>
                                         <th>% Activa</th>
-                                        <th>Índice Activa/Pasiva</th>
+                                        <th>Pasiva</th>
+                                        <th>Activa</th>
+                                        <th>Sin datos</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1023,19 +1023,19 @@ function parseDate(dateStr) {
             sortedPeriods.forEach(period => {
                 const pasiva = vigilanceData[period].Pasiva;
                 const activa = vigilanceData[period].Activa;
+                const otros = vigilanceData[period].Otros;
                 const total = vigilanceData[period].TOTAL;
                 const pctPasiva = total > 0 ? ((pasiva / total) * 100).toFixed(1) : '0.0';
                 const pctActiva = total > 0 ? ((activa / total) * 100).toFixed(1) : '0.0';
-                const indice = pasiva > 0 ? (activa / pasiva).toFixed(2) : 'N/A';
                 
                 html += `
                     <tr>
                         <td><strong>${period}</strong></td>
-                        <td>${pasiva}</td>
                         <td>${pctPasiva}%</td>
-                        <td>${activa}</td>
                         <td>${pctActiva}%</td>
-                        <td>${indice}</td>
+                        <td>${pasiva}</td>
+                        <td>${activa}</td>
+                        <td>${otros}</td>
                     </tr>
                 `;
             });
