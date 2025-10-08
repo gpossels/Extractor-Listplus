@@ -736,17 +736,17 @@ function parseDate(dateStr) {
                 }
                 serviceClassificationData[period][serviceVerified]['TOTAL']++;
                 
-                // Análisis de servicio por evento
-                if (!serviceEventData[period]) {
-                    serviceEventData[period] = {};
+                // Análisis de servicio por evento (reorganizado)
+                if (!serviceEventData[serviceVerified]) {
+                    serviceEventData[serviceVerified] = {};
                 }
-                if (!serviceEventData[period][serviceVerified]) {
-                    serviceEventData[period][serviceVerified] = {};
+                if (!serviceEventData[serviceVerified][period]) {
+                    serviceEventData[serviceVerified][period] = {};
                 }
-                if (!serviceEventData[period][serviceVerified][eventType]) {
-                    serviceEventData[period][serviceVerified][eventType] = 0;
+                if (!serviceEventData[serviceVerified][period][eventType]) {
+                    serviceEventData[serviceVerified][period][eventType] = 0;
                 }
-                serviceEventData[period][serviceVerified][eventType]++;
+                serviceEventData[serviceVerified][period][eventType]++;
                 
                 // Análisis de tipo de vigilancia
                 if (!vigilanceData[period]) {
@@ -891,13 +891,17 @@ function parseDate(dateStr) {
             tableHtml += '</tbody></table>';
             document.getElementById('previewContainer').innerHTML = tableHtml;
             
-            // Agregar análisis adicionales
+           // Agregar análisis adicionales
             const additionalAnalysisHtml = displayAdditionalAnalysis();
             document.getElementById('previewContainer').innerHTML += additionalAnalysisHtml;
             
+            // Inicializar la tabla de servicio por evento con el primer servicio
+            if (Object.keys(analysisResults.serviceEventData).length > 0) {
+                setTimeout(() => updateServiceEventTable(), 100);
+            }
+            
             document.getElementById('resultsStep').style.display = 'block';
             document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
-        }
         
         function displayAdditionalAnalysis() {
             const { sortedPeriods, classifications, serviceClassificationData, serviceEventData, vigilanceData, serviceComparisonData } = analysisResults;
@@ -944,51 +948,28 @@ function parseDate(dateStr) {
             `;
             
             // 2. Servicio por Evento
+            const allServices = Object.keys(serviceEventData).sort();
+            const allEvents = new Set();
+            allServices.forEach(service => {
+                Object.values(serviceEventData[service] || {}).forEach(periodData => {
+                    Object.keys(periodData).forEach(event => allEvents.add(event));
+                });
+            });
+            const sortedEvents = Array.from(allEvents).sort();
+            
             html += `
                 <div class="step collapsible-section">
                     <h2 onclick="toggleSection('section2')" style="cursor:pointer;">
                         <span id="icon-section2">▶</span> Servicio por Evento
                     </h2>
                     <div id="section2" class="section-content" style="display:none;">
-                        <div class="preview">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Periodo</th>
-                                        <th>Servicio</th>
-            `;
-            
-            // Obtener todos los eventos únicos
-            const allEvents = new Set();
-            sortedPeriods.forEach(period => {
-                Object.values(serviceEventData[period] || {}).forEach(serviceData => {
-                    Object.keys(serviceData).forEach(event => allEvents.add(event));
-                });
-            });
-            const sortedEvents = Array.from(allEvents).sort();
-            
-            sortedEvents.forEach(event => {
-                html += `<th>${event}</th>`;
-            });
-            html += `<th>TOTAL</th></tr></thead><tbody>`;
-            
-            sortedPeriods.forEach(period => {
-                const services = Object.keys(serviceEventData[period] || {}).sort();
-                services.forEach(service => {
-                    html += `<tr><td>${period}</td><td><strong>${service}</strong></td>`;
-                    let total = 0;
-                    sortedEvents.forEach(event => {
-                        const count = serviceEventData[period][service][event] || 0;
-                        html += `<td>${count}</td>`;
-                        total += count;
-                    });
-                    html += `<td><strong>${total}</strong></td></tr>`;
-                });
-            });
-            
-            html += `
-                                </tbody>
-                            </table>
+                        <div class="control-group" style="margin-bottom: 20px;">
+                            <label>Seleccionar Servicio:</label>
+                            <select id="serviceSelector" onchange="updateServiceEventTable()">
+                                ${allServices.map(service => `<option value="${service}">${service}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div id="serviceEventTableContainer" class="preview">
                         </div>
                     </div>
                 </div>
@@ -1099,6 +1080,71 @@ function parseDate(dateStr) {
                 section.style.display = 'none';
                 icon.textContent = '▶';
             }
+        }
+        function updateServiceEventTable() {
+            const selectedService = document.getElementById('serviceSelector').value;
+            const { sortedPeriods, serviceEventData } = analysisResults;
+            
+            // Obtener todos los eventos para este servicio
+            const allEvents = new Set();
+            Object.values(serviceEventData[selectedService] || {}).forEach(periodData => {
+                Object.keys(periodData).forEach(event => allEvents.add(event));
+            });
+            const sortedEvents = Array.from(allEvents).sort();
+            
+            let tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Periodo</th>
+                            ${sortedEvents.map(event => `<th>${event}</th>`).join('')}
+                            <th>TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            sortedPeriods.forEach(period => {
+                tableHtml += `<tr><td><strong>${period}</strong></td>`;
+                let total = 0;
+                sortedEvents.forEach(event => {
+                    const count = (serviceEventData[selectedService] && 
+                                   serviceEventData[selectedService][period] && 
+                                   serviceEventData[selectedService][period][event]) || 0;
+                    tableHtml += `<td>${count}</td>`;
+                    total += count;
+                });
+                tableHtml += `<td><strong>${total}</strong></td></tr>`;
+            });
+            
+            // Fila de totales
+            tableHtml += `<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>`;
+            sortedEvents.forEach(event => {
+                let eventTotal = 0;
+                sortedPeriods.forEach(period => {
+                    eventTotal += (serviceEventData[selectedService] && 
+                                   serviceEventData[selectedService][period] && 
+                                   serviceEventData[selectedService][period][event]) || 0;
+                });
+                tableHtml += `<td>${eventTotal}</td>`;
+            });
+            
+            let grandTotal = 0;
+            sortedPeriods.forEach(period => {
+                sortedEvents.forEach(event => {
+                    grandTotal += (serviceEventData[selectedService] && 
+                                   serviceEventData[selectedService][period] && 
+                                   serviceEventData[selectedService][period][event]) || 0;
+                });
+            });
+            tableHtml += `<td>${grandTotal}</td></tr>`;
+            
+            tableHtml += `
+                    </tbody>
+                </table>
+            `;
+            
+            document.getElementById('serviceEventTableContainer').innerHTML = tableHtml;
         }
         
         function downloadExcel() {
