@@ -67,6 +67,11 @@
             background: #f0fff4;
         }
         
+        .upload-area.error {
+            border-color: #dc3545;
+            background: #fff0f0;
+        }
+        
         input[type="file"] {
             display: none;
         }
@@ -128,6 +133,15 @@
             border-radius: 5px;
         }
         
+        .error-box {
+            background: #ffe7e7;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            color: #721c24;
+        }
+        
         .preview {
             margin-top: 20px;
             overflow-x: auto;
@@ -168,6 +182,24 @@
         }
         
         .copy-btn:hover {
+            opacity: 1;
+            transform: none;
+        }
+
+        .row-copy-btn {
+            background: transparent;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 11px;
+            padding: 3px 6px;
+            margin-left: 8px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            text-decoration: underline;
+        }
+        
+        .row-copy-btn:hover {
             opacity: 1;
             transform: none;
         }
@@ -236,6 +268,41 @@
         .action-buttons button {
             flex: 1;
         }
+                
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .loading-content {
+            background: white;
+            padding: 30px 50px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -247,11 +314,13 @@
             <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
                 <div id="uploadText">
                     📁 Haz clic aquí o arrastra tu archivo Excel<br>
-                    <small>Se eliminarán automáticamente los duplicados en columna B (ID. Evento)</small>
+                    <small>Se eliminarán automáticamente los duplicados en columna "ID. Evento"</small>
+                    
                 </div>
             </div>
             <input type="file" id="fileInput" accept=".xlsx,.xls">
             <div id="fileInfo" class="info-box" style="display:none;"></div>
+            <div id="errorInfo" class="error-box" style="display:none;"></div>
         </div>
 
         <div class="step" id="analysisStep" style="display:none;">
@@ -315,105 +384,208 @@
         let workbook = null;
         let cleanedData = null;
         let analysisResults = null;
+        let columnIndices = null;
 
         document.getElementById('fileInput').addEventListener('change', handleFile);
 
+        function showLoading(message = 'Procesando...') {
+            const overlay = document.createElement('div');
+            overlay.className = 'loading-overlay';
+            overlay.id = 'loadingOverlay';
+            overlay.innerHTML = `
+                <div class="loading-content">
+                    <div class="spinner"></div>
+                    <div>${message}</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.remove();
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorInfo');
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML = `<strong>❌ Error:</strong><br>${message}`;
+            
+            const uploadArea = document.getElementById('uploadArea');
+            uploadArea.classList.add('error');
+            uploadArea.classList.remove('loaded');
+        }
+
+        function clearError() {
+            const errorDiv = document.getElementById('errorInfo');
+            errorDiv.style.display = 'none';
+            
+            const uploadArea = document.getElementById('uploadArea');
+            uploadArea.classList.remove('error');
+        }
+        
         function handleFile(e) {
             const file = e.target.files[0];
             if (!file) return;
 
+            clearError();
+            showLoading('Cargando archivo...');
+
             const reader = new FileReader();
             reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                workbook = XLSX.read(data, { type: 'array', cellDates: true });
-                processFile();
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    processFile();
+                } catch (error) {
+                    hideLoading();
+                    showError(`No se pudo leer el archivo: ${error.message}`);
+                }
+            };
+            reader.onerror = function() {
+                hideLoading();
+                showError('Error al leer el archivo. Por favor, intenta nuevamente.');
             };
             reader.readAsArrayBuffer(file);
         }
 
-        function processFile() {
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
-            
-            if (jsonData.length < 2) {
-                alert('El archivo no contiene datos suficientes');
-                return;
-            }
-
-            const headers = jsonData[0];
-            const rows = jsonData.slice(1);
-            
-            // Eliminar duplicados por columna B (índice 1)
-            const seen = new Set();
-            const uniqueRows = rows.filter(row => {
-                const id = row[1];
-                if (!id || seen.has(id)) {
-                    return false;
+function findColumnIndex(headers, possibleNames) {
+            for (let i = 0; i < headers.length; i++) {
+                const header = String(headers[i]).trim().toLowerCase();
+                for (let name of possibleNames) {
+                    if (header.includes(name.toLowerCase())) {
+                        return i;
+                    }
                 }
-                seen.add(id);
-                return true;
-            });
-
-            cleanedData = {
-                headers: headers,
-                rows: uniqueRows
-            };
-
-            const uploadArea = document.getElementById('uploadArea');
-            uploadArea.classList.add('loaded');
-            document.getElementById('uploadText').innerHTML = '✅ Archivo cargado correctamente';
-            
-            const info = document.getElementById('fileInfo');
-            info.style.display = 'block';
-            info.innerHTML = `
-                <strong>Información del archivo:</strong><br>
-                • Filas originales: ${rows.length}<br>
-                • Duplicados eliminados: ${rows.length - uniqueRows.length}<br>
-                • Filas únicas: ${uniqueRows.length}
-            `;
-
-            document.getElementById('analysisStep').style.display = 'block';
+            }
+            return -1;
         }
 
-        function parseDate(dateStr) {
+        function validateHeaders(headers) {
+            const requiredColumns = {
+                eventId: ['id. evento', 'id evento', 'evento'],
+                occurrenceDate: ['fecha de ocurrencia', 'fecha ocurrencia', 'ocurrencia'],
+                notificationDate: ['fecha de notificación', 'fecha notificación', 'notificación', 'fecha notificacion', 'notificacion'],
+                classification: ['clasificación', 'clasificacion']
+            };
+
+            const indices = {};
+            const missing = [];
+
+            for (let [key, names] of Object.entries(requiredColumns)) {
+                const index = findColumnIndex(headers, names);
+                if (index === -1) {
+                    missing.push(names[0]);
+                } else {
+                    indices[key] = index;
+                }
+            }
+
+            if (missing.length > 0) {
+                return {
+                    valid: false,
+                    message: `No se encontraron las siguientes columnas requeridas:<br>• ${missing.join('<br>• ')}<br><br>Columnas encontradas: ${headers.join(', ')}`
+                };
+            }
+
+            return { valid: true, indices };
+        }
+
+        function processFile() {
+            try {
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, raw: false, dateNF: 'dd-mm-yyyy' });
+                
+                if (jsonData.length < 2) {
+                    hideLoading();
+                    showError('El archivo no contiene datos suficientes (se requiere al menos una fila de encabezados y una fila de datos).');
+                    return;
+                }
+
+                const headers = jsonData[0];
+                const validation = validateHeaders(headers);
+
+                if (!validation.valid) {
+                    hideLoading();
+                    showError(validation.message);
+                    return;
+                }
+
+                columnIndices = validation.indices;
+                const rows = jsonData.slice(1);
+                
+                // Eliminar duplicados por columna eventId
+                const seen = new Set();
+                const uniqueRows = rows.filter(row => {
+                    const id = row[columnIndices.eventId];
+                    if (!id || seen.has(id)) {
+                        return false;
+                    }
+                    seen.add(id);
+                    return true;
+                });
+
+                cleanedData = {
+                    headers: headers,
+                    rows: uniqueRows
+                };
+
+                const uploadArea = document.getElementById('uploadArea');
+                uploadArea.classList.add('loaded');
+                uploadArea.classList.remove('error');
+                document.getElementById('uploadText').innerHTML = '✅ Archivo cargado correctamente';
+                
+                const info = document.getElementById('fileInfo');
+                info.style.display = 'block';
+                info.innerHTML = `
+                    <strong>Información del archivo:</strong><br>
+                    • Filas originales: ${rows.length}<br>
+                    • Duplicados eliminados: ${rows.length - uniqueRows.length}<br>
+                    • Filas únicas: ${uniqueRows.length}
+                `;
+
+                document.getElementById('analysisStep').style.display = 'block';
+                hideLoading();
+
+            } catch (error) {
+                hideLoading();
+                showError(`Error al procesar el archivo: ${error.message}`);
+            }
+        }
+        
+       function parseDate(dateStr) {
             if (!dateStr) return null;
             
             // Si ya es un objeto Date
-            if (dateStr instanceof Date) return dateStr;
+            if (dateStr instanceof Date) {
+                // Ajustar a zona horaria de Chile continental (UTC-3 o UTC-4, usamos UTC-4)
+                return new Date(dateStr.getTime() - (dateStr.getTimezoneOffset() * 60000));
+            }
             
-            // Intentar parsear diferentes formatos
-            const formats = [
-                // dd-mm-yyyy o dd/mm/yyyy
-                /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/,
-                // yyyy-mm-dd
-                /^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/
-            ];
-            
-            for (let format of formats) {
-                const match = String(dateStr).match(format);
-                if (match) {
-                    if (match[1].length === 4) {
-                        // yyyy-mm-dd
-                        return new Date(match[1], match[2] - 1, match[3]);
-                    } else {
-                        // dd-mm-yyyy
-                        return new Date(match[3], match[2] - 1, match[1]);
-                    }
-                }
+            // Formato DD-MM-YYYY o DD/MM/YYYY (primeros 2 dígitos siempre son día, segundos 2 son mes)
+            const match = String(dateStr).match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+            if (match) {
+                const day = parseInt(match[1]);
+                const month = parseInt(match[2]) - 1; // JavaScript months are 0-indexed
+                const year = parseInt(match[3]);
+                // Crear fecha en zona horaria de Chile (UTC-4)
+                return new Date(year, month, day);
             }
             
             // Último intento con Date.parse
             const date = new Date(dateStr);
             return isNaN(date.getTime()) ? null : date;
         }
-
         function getWeekNumber(date) {
-            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-            const dayNum = d.getUTCDay() || 7;
-            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            // Calcular en zona horaria de Chile
+            const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            const dayNum = d.getDay() || 7;
+            d.setDate(d.getDate() + 4 - dayNum);
+            const yearStart = new Date(d.getFullYear(), 0, 1);
             const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-            return { year: d.getUTCFullYear(), week: weekNo };
+            return { year: d.getFullYear(), week: weekNo };
         }
 
         function getPeriodKey(date, periodType) {
@@ -445,13 +617,16 @@
             }
         }
 
-        function analyzeData() {
-            const periodType = document.getElementById('periodType').value;
-            const dateType = document.querySelector('input[name="dateType"]:checked').value;
-            const orientation = document.querySelector('input[name="orientation"]:checked').value;
-            
-            const dateColIndex = dateType === 'occurrence' ? 3 : 4; // D=3, E=4
-            const classificationColIndex = 21; // V es la columna 22 (índice 21)
+            function analyzeData() {
+                try {
+                    showLoading('Analizando datos...');
+
+                const periodType = document.getElementById('periodType').value;
+                const dateType = document.querySelector('input[name="dateType"]:checked').value;
+                const orientation = document.querySelector('input[name="orientation"]:checked').value;
+                
+                const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
+                const classificationColIndex = columnIndices.classification;
             
             const classifications = ['Descarte', 'Incidente', 'Near Miss', 'Adverso', 'Centinela', 'Sin clasificación'];
             const periodData = {};
@@ -501,7 +676,13 @@
                 classifications
             };
             
-            displayResults();
+         displayResults();
+                hideLoading();
+
+            } catch (error) {
+                hideLoading();
+                showError(`Error al analizar los datos: ${error.message}`);
+            }
         }
 
         function displayResults() {
@@ -537,19 +718,26 @@
             // Generar tabla
             let tableHtml = '<table>';
             
-            if (orientation === 'rows') {
+           if (orientation === 'rows') {
                 // Periodos como filas
                 tableHtml += '<thead><tr><th>Periodo</th>';
-                classifications.forEach(c => tableHtml += `<th>${c}<button class="copy-btn" onclick="copyColumn(event, '${c}')">copiar columna</button></th>`);
-                tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyColumn(event, \'TOTAL\')">copiar columna</button></th></tr></thead><tbody>';
+                classifications.forEach(c => tableHtml += `<th>${c}<button class="copy-btn" onclick="copyColumn(event, '${c}')">copiar</button></th>`);
+                tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyColumn(event, \'TOTAL\')">copiar</button></th></tr></thead><tbody>';
                 
                 sortedPeriods.forEach(period => {
-                    tableHtml += `<tr><td><strong>${period}</strong></td>`;
+                    tableHtml += `<tr data-row="${period}"><td><strong>${period}</strong><button class="row-copy-btn" onclick="copyRow(event, '${period}')">copiar</button></td>`;
                     classifications.forEach(c => {
                         tableHtml += `<td data-col="${c}">${periodData[period][c]}</td>`;
                     });
                     tableHtml += `<td data-col="TOTAL"><strong>${periodData[period]['TOTAL']}</strong></td></tr>`;
                 });
+                
+                // Fila de totales
+                tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;" data-row="TOTAL"><td>TOTAL<button class="row-copy-btn" onclick="copyRow(event, \'TOTAL\')">copiar</button></td>';
+                classifications.forEach(c => {
+                    tableHtml += `<td data-col="${c}">${classificationTotals[c]}</td>`;
+                });
+                tableHtml += `<td data-col="TOTAL">${totalEvents}</td></tr>`;
                 
                 // Fila de totales
                 tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>';
@@ -558,14 +746,14 @@
                 });
                 tableHtml += `<td data-col="TOTAL">${totalEvents}</td></tr>`;
                 
-            } else {
+           } else {
                 // Periodos como columnas
                 tableHtml += '<thead><tr><th>Clasificación</th>';
-                sortedPeriods.forEach(p => tableHtml += `<th>${p}<button class="copy-btn" onclick="copyColumn(event, '${p}')">copiar fila</button></th>`);
-                tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyColumn(event, \'TOTAL\')">copiar fila</button></th></tr></thead><tbody>';
+                sortedPeriods.forEach(p => tableHtml += `<th>${p}<button class="copy-btn" onclick="copyColumn(event, '${p}')">copiar</button></th>`);
+                tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyColumn(event, \'TOTAL\')">copiar</button></th></tr></thead><tbody>';
                 
                 classifications.forEach(c => {
-                    tableHtml += `<tr><td><strong>${c}</strong></td>`;
+                    tableHtml += `<tr data-row="${c}"><td><strong>${c}</strong><button class="row-copy-btn" onclick="copyRow(event, '${c}')">copiar</button></td>`;
                     sortedPeriods.forEach(period => {
                         tableHtml += `<td data-col="${period}">${periodData[period][c]}</td>`;
                     });
@@ -573,7 +761,7 @@
                 });
                 
                 // Fila de totales
-                tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>';
+                tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;" data-row="TOTAL"><td>TOTAL<button class="row-copy-btn" onclick="copyRow(event, \'TOTAL\')">copiar</button></td>';
                 sortedPeriods.forEach(period => {
                     tableHtml += `<td data-col="${period}">${periodData[period]['TOTAL']}</td>`;
                 });
@@ -638,7 +826,13 @@
             const ws = XLSX.utils.aoa_to_sheet(wsData);
             XLSX.utils.book_append_sheet(wb, ws, 'Resumen por Periodo');
             
-            XLSX.writeFile(wb, 'Analisis_Incidentes.xlsx');
+           XLSX.writeFile(wb, 'Analisis_Incidentes.xlsx');
+                hideLoading();
+
+            } catch (error) {
+                hideLoading();
+                showError(`Error al generar el archivo Excel: ${error.message}`);
+            }
         }
 
         function resetAnalysis() {
@@ -649,25 +843,54 @@
         function copyColumn(event, columnName) {
             event.stopPropagation();
             
-            // Obtener todas las celdas de esa columna
-            const cells = document.querySelectorAll(`td[data-col="${columnName}"]`);
-            
-            // Extraer los valores, excluyendo el último (que es el total)
-            const values = Array.from(cells).slice(0, -1).map(cell => cell.textContent.trim());
-            
-            // Copiar al portapapeles
-            const text = values.join('\n');
-            navigator.clipboard.writeText(text).then(() => {
-                showCopiedNotification(columnName);
-            }).catch(err => {
-                alert('Error al copiar: ' + err);
-            });
+            try {
+                // Obtener todas las celdas de esa columna
+                const cells = document.querySelectorAll(`td[data-col="${columnName}"]`);
+                
+                // Extraer los valores, excluyendo el último (que es el total)
+                const values = Array.from(cells).slice(0, -1).map(cell => cell.textContent.trim());
+                
+                // Copiar al portapapeles
+                const text = values.join('\n');
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopiedNotification(`Columna "${columnName}" copiada`);
+                }).catch(err => {
+                    alert('Error al copiar: ' + err);
+                });
+            } catch (error) {
+                alert('Error al copiar columna: ' + error.message);
+            }
         }
-        
-        function showCopiedNotification(columnName) {
+        function copyRow(event, rowName) {
+            event.stopPropagation();
+            
+            try {
+                // Obtener la fila completa
+                const row = document.querySelector(`tr[data-row="${rowName}"]`);
+                if (!row) {
+                    alert('No se encontró la fila');
+                    return;
+                }
+                
+                // Obtener todas las celdas de datos (excluyendo la primera que es el nombre y la última que es el total)
+                const cells = row.querySelectorAll('td');
+                const values = Array.from(cells).slice(1, -1).map(cell => cell.textContent.trim());
+                
+                // Copiar al portapapeles (valores separados por tabulación para pegar en Excel)
+                const text = values.join('\t');
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopiedNotification(`Fila "${rowName}" copiada`);
+                }).catch(err => {
+                    alert('Error al copiar: ' + err);
+                });
+            } catch (error) {
+                alert('Error al copiar fila: ' + error.message);
+            }
+        }
+function showCopiedNotification(message) {
             const notification = document.createElement('div');
             notification.className = 'copied-notification';
-            notification.textContent = `✓ Columna "${columnName}" copiada`;
+            notification.textContent = `✓ ${message}`;
             document.body.appendChild(notification);
             
             setTimeout(() => {
