@@ -615,18 +615,7 @@ function parseDate(dateStr) {
             return new Date(year, month, day);
         }
     }
-    const dateStr = row[dateColIndex];
-
-// DEBUG - eliminar después
-if (index < 5) {
-    console.log(`Fila ${index}:`, {
-        raw: dateStr,
-        type: typeof dateStr,
-        isDate: dateStr instanceof Date,
-        parsed: parseDate(dateStr),
-        periodKey: getPeriodKey(parseDate(dateStr), periodType)
-    });
-}
+    
     // Intentar parseo estándar
     const date = new Date(dateString);
     if (!isNaN(date.getTime())) {
@@ -634,7 +623,8 @@ if (index < 5) {
     }
     
     return null;
-}       
+}        
+        
         function getWeekNumber(date) {
             // Calcular en zona horaria de Chile
             const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
