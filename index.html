@@ -258,7 +258,22 @@
             color: #666;
             margin-top: 5px;
         }
-
+        
+        .collapsible-section h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            user-select: none;
+        }
+        
+        .collapsible-section h2:hover {
+            color: #764ba2;
+        }
+        
+        .section-content {
+            margin-top: 15px;
+        }
+        
         .action-buttons {
             display: flex;
             gap: 10px;
@@ -468,7 +483,11 @@ function findColumnIndex(headers, possibleNames) {
                 eventId: ['id. evento', 'id evento', 'evento'],
                 occurrenceDate: ['fecha de ocurrencia', 'fecha ocurrencia', 'ocurrencia'],
                 notificationDate: ['fecha de notificación', 'fecha notificación', 'notificación', 'fecha notificacion', 'notificacion'],
-                classification: ['clasificación', 'clasificacion']
+                classification: ['clasificación', 'clasificacion'],
+                serviceReported: ['servicio ocurrencia'],
+                serviceVerified: ['servicio de ocurrencia'],
+                vigilanceType: ['tipo de vigilancia'],
+                eventType: ['evento']
             };
 
             const indices = {};
@@ -482,11 +501,10 @@ function findColumnIndex(headers, possibleNames) {
                     indices[key] = index;
                 }
             }
-
             if (missing.length > 0) {
                 return {
                     valid: false,
-                    message: `No se encontraron las siguientes columnas requeridas:<br>• ${missing.join('<br>• ')}<br><br>Columnas encontradas: ${headers.join(', ')}`
+                    message: `No se encontraron las siguientes columnas requeridas:<br>• ${missing.join('<br>• ')}<br><br>Nota: Se buscan "Servicio Ocurrencia" (debe aparecer 2 veces: columnas F y R)<br><br>Columnas encontradas: ${headers.join(', ')}`
                 };
             }
 
@@ -634,22 +652,51 @@ function parseDate(dateStr) {
                 
                 const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
                 const classificationColIndex = columnIndices.classification;
+                const serviceReportedColIndex = columnIndices.serviceReported;
+                const serviceVerifiedColIndex = columnIndices.serviceVerified;
+                const vigilanceTypeColIndex = columnIndices.vigilanceType;
+                const eventTypeColIndex = columnIndices.eventType;
             
             const classifications = ['Descarte', 'Incidente', 'Near Miss', 'Adverso', 'Centinela', 'Sin clasificación'];
             const periodData = {};
+            const serviceClassificationData = {};
+            const serviceEventData = {};
+            const vigilanceData = {};
+            const serviceComparisonData = {};
             
             cleanedData.rows.forEach(row => {
                 const dateStr = row[dateColIndex];
                 let classification = row[classificationColIndex];
+                let serviceVerified = row[serviceVerifiedColIndex] || 'Sin servicio';
+                let serviceReported = row[serviceReportedColIndex] || 'Sin servicio';
+                let vigilanceType = row[vigilanceTypeColIndex] || 'Sin tipo';
+                let eventType = row[eventTypeColIndex] || 'Sin evento';
                 
                 // Si la clasificación está vacía, asignar "Sin clasificación"
                 if (!classification || classification.toString().trim() === '') {
                     classification = 'Sin clasificación';
                 }
                 
+                if (serviceVerified && serviceVerified.toString().trim() === '') {
+                    serviceVerified = 'Sin servicio';
+                }
+                
+                if (serviceReported && serviceReported.toString().trim() === '') {
+                    serviceReported = 'Sin servicio';
+                }
+                
+                if (vigilanceType && vigilanceType.toString().trim() === '') {
+                    vigilanceType = 'Sin tipo';
+                }
+                
+                if (eventType && eventType.toString().trim() === '') {
+                    eventType = 'Sin evento';
+                }
+                
                 const date = parseDate(dateStr);
                 const period = getPeriodKey(date, periodType);
                 
+                // Análisis de clasificaciones por periodo
                 if (!periodData[period]) {
                     periodData[period] = {
                         'Descarte': 0,
@@ -666,8 +713,77 @@ function parseDate(dateStr) {
                     periodData[period][classification]++;
                     periodData[period]['TOTAL']++;
                 } else {
-                    // Contar otros tipos en TOTAL
                     periodData[period]['TOTAL']++;
+                }
+                
+                // Análisis de clasificación por servicio verificado
+                if (!serviceClassificationData[period]) {
+                    serviceClassificationData[period] = {};
+                }
+                if (!serviceClassificationData[period][serviceVerified]) {
+                    serviceClassificationData[period][serviceVerified] = {
+                        'Descarte': 0,
+                        'Incidente': 0,
+                        'Near Miss': 0,
+                        'Adverso': 0,
+                        'Centinela': 0,
+                        'Sin clasificación': 0,
+                        'TOTAL': 0
+                    };
+                }
+                if (classifications.includes(classification)) {
+                    serviceClassificationData[period][serviceVerified][classification]++;
+                }
+                serviceClassificationData[period][serviceVerified]['TOTAL']++;
+                
+                // Análisis de servicio por evento
+                if (!serviceEventData[period]) {
+                    serviceEventData[period] = {};
+                }
+                if (!serviceEventData[period][serviceVerified]) {
+                    serviceEventData[period][serviceVerified] = {};
+                }
+                if (!serviceEventData[period][serviceVerified][eventType]) {
+                    serviceEventData[period][serviceVerified][eventType] = 0;
+                }
+                serviceEventData[period][serviceVerified][eventType]++;
+                
+                // Análisis de tipo de vigilancia
+                if (!vigilanceData[period]) {
+                    vigilanceData[period] = {
+                        'Pasiva': 0,
+                        'Activa': 0,
+                        'Otros': 0,
+                        'TOTAL': 0
+                    };
+                }
+                if (vigilanceType === 'Pasiva' || vigilanceType === 'Activa') {
+                    vigilanceData[period][vigilanceType]++;
+                } else {
+                    vigilanceData[period]['Otros']++;
+                }
+                vigilanceData[period]['TOTAL']++;
+                
+                // Análisis de comparación de servicios
+                if (!serviceComparisonData[period]) {
+                    serviceComparisonData[period] = {};
+                }
+                if (!serviceComparisonData[period][serviceReported]) {
+                    serviceComparisonData[period][serviceReported] = {
+                        reported: 0,
+                        verified: {},
+                        matches: 0
+                    };
+                }
+                serviceComparisonData[period][serviceReported].reported++;
+                
+                if (!serviceComparisonData[period][serviceReported].verified[serviceVerified]) {
+                    serviceComparisonData[period][serviceReported].verified[serviceVerified] = 0;
+                }
+                serviceComparisonData[period][serviceReported].verified[serviceVerified]++;
+                
+                if (serviceReported === serviceVerified) {
+                    serviceComparisonData[period][serviceReported].matches++;
                 }
             });
             
@@ -680,7 +796,11 @@ function parseDate(dateStr) {
                 orientation,
                 periodData,
                 sortedPeriods,
-                classifications
+                classifications,
+                serviceClassificationData,
+                serviceEventData,
+                vigilanceData,
+                serviceComparisonData
             };
             
          displayResults();
@@ -770,10 +890,217 @@ function parseDate(dateStr) {
             
             tableHtml += '</tbody></table>';
             document.getElementById('previewContainer').innerHTML = tableHtml;
+            
+            // Agregar análisis adicionales
+            const additionalAnalysisHtml = displayAdditionalAnalysis();
+            document.getElementById('previewContainer').innerHTML += additionalAnalysisHtml;
+            
             document.getElementById('resultsStep').style.display = 'block';
             document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
         }
-
+        
+        function displayAdditionalAnalysis() {
+            const { sortedPeriods, classifications, serviceClassificationData, serviceEventData, vigilanceData, serviceComparisonData } = analysisResults;
+            
+            let html = '';
+            
+            // 1. Clasificación por Servicio
+            html += `
+                <div class="step collapsible-section">
+                    <h2 onclick="toggleSection('section1')" style="cursor:pointer;">
+                        <span id="icon-section1">▶</span> Clasificación por Servicio de Ocurrencia Verificado por Calidad
+                    </h2>
+                    <div id="section1" class="section-content" style="display:none;">
+                        <div class="preview">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Periodo</th>
+                                        <th>Servicio</th>
+                                        ${classifications.map(c => `<th>${c}</th>`).join('')}
+                                        <th>TOTAL</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            
+            sortedPeriods.forEach(period => {
+                const services = Object.keys(serviceClassificationData[period] || {}).sort();
+                services.forEach(service => {
+                    html += `<tr><td>${period}</td><td><strong>${service}</strong></td>`;
+                    classifications.forEach(c => {
+                        html += `<td>${serviceClassificationData[period][service][c]}</td>`;
+                    });
+                    html += `<td><strong>${serviceClassificationData[period][service]['TOTAL']}</strong></td></tr>`;
+                });
+            });
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 2. Servicio por Evento
+            html += `
+                <div class="step collapsible-section">
+                    <h2 onclick="toggleSection('section2')" style="cursor:pointer;">
+                        <span id="icon-section2">▶</span> Servicio por Evento
+                    </h2>
+                    <div id="section2" class="section-content" style="display:none;">
+                        <div class="preview">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Periodo</th>
+                                        <th>Servicio</th>
+            `;
+            
+            // Obtener todos los eventos únicos
+            const allEvents = new Set();
+            sortedPeriods.forEach(period => {
+                Object.values(serviceEventData[period] || {}).forEach(serviceData => {
+                    Object.keys(serviceData).forEach(event => allEvents.add(event));
+                });
+            });
+            const sortedEvents = Array.from(allEvents).sort();
+            
+            sortedEvents.forEach(event => {
+                html += `<th>${event}</th>`;
+            });
+            html += `<th>TOTAL</th></tr></thead><tbody>`;
+            
+            sortedPeriods.forEach(period => {
+                const services = Object.keys(serviceEventData[period] || {}).sort();
+                services.forEach(service => {
+                    html += `<tr><td>${period}</td><td><strong>${service}</strong></td>`;
+                    let total = 0;
+                    sortedEvents.forEach(event => {
+                        const count = serviceEventData[period][service][event] || 0;
+                        html += `<td>${count}</td>`;
+                        total += count;
+                    });
+                    html += `<td><strong>${total}</strong></td></tr>`;
+                });
+            });
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 3. Tipo de Vigilancia
+            html += `
+                <div class="step collapsible-section">
+                    <h2 onclick="toggleSection('section3')" style="cursor:pointer;">
+                        <span id="icon-section3">▶</span> Análisis de Tipo de Vigilancia
+                    </h2>
+                    <div id="section3" class="section-content" style="display:none;">
+                        <div class="preview">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Periodo</th>
+                                        <th>Pasiva</th>
+                                        <th>Activa</th>
+                                        <th>Otros</th>
+                                        <th>TOTAL</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            
+            sortedPeriods.forEach(period => {
+                html += `
+                    <tr>
+                        <td><strong>${period}</strong></td>
+                        <td>${vigilanceData[period].Pasiva}</td>
+                        <td>${vigilanceData[period].Activa}</td>
+                        <td>${vigilanceData[period].Otros}</td>
+                        <td><strong>${vigilanceData[period].TOTAL}</strong></td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 4. Comparación de Servicios
+            html += `
+                <div class="step collapsible-section">
+                    <h2 onclick="toggleSection('section4')" style="cursor:pointer;">
+                        <span id="icon-section4">▶</span> Análisis de Coincidencia de Servicios
+                    </h2>
+                    <div id="section4" class="section-content" style="display:none;">
+                        <div class="preview">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Periodo</th>
+                                        <th>Servicio</th>
+                                        <th>Reportados (F)</th>
+                                        <th>Verificados como mismo (R)</th>
+                                        <th>Coincidencias</th>
+                                        <th>% Coincidencia</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            `;
+            
+            sortedPeriods.forEach(period => {
+                const services = Object.keys(serviceComparisonData[period] || {}).sort();
+                services.forEach(service => {
+                    const data = serviceComparisonData[period][service];
+                    const verifiedAsSame = data.verified[service] || 0;
+                    const percentage = data.reported > 0 ? ((data.matches / data.reported) * 100).toFixed(1) : '0.0';
+                    
+                    html += `
+                        <tr>
+                            <td>${period}</td>
+                            <td><strong>${service}</strong></td>
+                            <td>${data.reported}</td>
+                            <td>${verifiedAsSame}</td>
+                            <td>${data.matches}</td>
+                            <td>${percentage}%</td>
+                        </tr>
+                    `;
+                });
+            });
+            
+            html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return html;
+        }
+        
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const icon = document.getElementById('icon-' + sectionId);
+            
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                section.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+        
         function downloadExcel() {
             try {
                 showLoading('Generando archivo Excel...');
