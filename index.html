@@ -738,14 +738,7 @@ function findColumnIndex(headers, possibleNames) {
                     tableHtml += `<td data-col="${c}">${classificationTotals[c]}</td>`;
                 });
                 tableHtml += `<td data-col="TOTAL">${totalEvents}</td></tr>`;
-                
-                // Fila de totales
-                tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>';
-                classifications.forEach(c => {
-                    tableHtml += `<td data-col="${c}">${classificationTotals[c]}</td>`;
-                });
-                tableHtml += `<td data-col="TOTAL">${totalEvents}</td></tr>`;
-                
+                                                
            } else {
                 // Periodos como columnas
                 tableHtml += '<thead><tr><th>Clasificación</th>';
@@ -775,7 +768,10 @@ function findColumnIndex(headers, possibleNames) {
         }
 
         function downloadExcel() {
-            const { periodData, sortedPeriods, classifications, orientation } = analysisResults;
+            try {
+                showLoading('Generando archivo Excel...');
+
+                const { periodData, sortedPeriods, classifications, orientation } = analysisResults;
             
             const wb = XLSX.utils.book_new();
             let wsData = [];
