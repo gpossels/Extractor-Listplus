@@ -701,13 +701,14 @@ function performFuzzyMatching() {
             return;
         }
 
-        // Buscar columnas en planilla de unidades (asumiendo "Nombre" y "Unidad")
-        const nameIdx = unitsData.headers.findIndex(h => 
-            String(h).trim().toLowerCase().includes('nombre')
-        );
-        const unitIdx = unitsData.headers.findIndex(h => 
-            String(h).trim().toLowerCase().includes('unidad')
-        );
+// Buscar columnas en planilla de unidades
+const nameIdx = unitsData.headers.findIndex(h => {
+    const header = String(h).trim().toLowerCase();
+    return header.includes('nombre') || header.includes('notificador');
+});
+const unitIdx = unitsData.headers.findIndex(h => 
+    String(h).trim().toLowerCase().includes('unidad')
+);
 
         if (nameIdx === -1 || unitIdx === -1) {
             hideLoading();
