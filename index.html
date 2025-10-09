@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Extractor de Datos Planilla Listplus</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuzzyset/1.0.7/fuzzyset.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -313,7 +314,11 @@
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
         }
-        
+        .upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -326,14 +331,23 @@
         
         <div class="step">
             <h2>Paso 1: Cargar Archivo Excel</h2>
-            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
-                <div id="uploadText">
-                    📁 Haz clic aquí o arrastra tu archivo Excel<br>
-                    <small>Se eliminarán automáticamente los duplicados en columna "ID. Evento"</small>
-            
-                </div>
-            </div>
-            <input type="file" id="fileInput" accept=".xlsx,.xls">
+            <div class="upload-grid">
+    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+        <div id="uploadText">
+            📁 Planilla de Reportes<br>
+            <small>Se eliminarán duplicados en "ID. Evento"</small>
+        </div>
+    </div>
+    
+    <div class="upload-area" id="unitsUploadArea" onclick="document.getElementById('unitsFileInput').click()">
+        <div id="unitsUploadText">
+            👥 Planilla de Unidades (Opcional)<br>
+            <small>Para análisis por unidad</small>
+        </div>
+    </div>
+</div>
+<input type="file" id="fileInput" accept=".xlsx,.xls">
+<input type="file" id="unitsFileInput" accept=".xlsx,.xls">
             <div id="fileInfo" class="info-box" style="display:none;"></div>
             <div id="errorInfo" class="error-box" style="display:none;"></div>
         </div>
@@ -397,12 +411,16 @@
 
     <script>
         let workbook = null;
-        let cleanedData = null;
-        let analysisResults = null;
-        let columnIndices = null;
+let cleanedData = null;
+let analysisResults = null;
+let columnIndices = null;
+let unitsWorkbook = null;
+let unitsData = null;
+let fuzzyMatchResults = null;
 
         document.getElementById('fileInput').addEventListener('change', handleFile);
-
+        document.getElementById('unitsFileInput').addEventListener('change', handleUnitsFile);
+       
         function showLoading(message = 'Procesando...') {
             const overlay = document.createElement('div');
             overlay.className = 'loading-overlay';
@@ -601,7 +619,173 @@ info.innerHTML = `
                 showError(`Error al procesar el archivo: ${error.message}`);
             }
         }
+                
+function handleUnitsFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    showLoading('Cargando archivo de unidades...');
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            unitsWorkbook = XLSX.read(data, { type: 'array' });
+            processUnitsFile();
+        } catch (error) {
+            hideLoading();
+            showError(`No se pudo leer el archivo de unidades: ${error.message}`);
+        }
+    };
+    reader.onerror = function() {
+        hideLoading();
+        showError('Error al leer el archivo de unidades.');
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function processUnitsFile() {
+    try {
+        const firstSheet = unitsWorkbook.Sheets[unitsWorkbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
         
+        if (jsonData.length < 2) {
+            hideLoading();
+            showError('El archivo de unidades no contiene datos suficientes.');
+            return;
+        }
+
+        unitsData = {
+            headers: jsonData[0],
+            rows: jsonData.slice(1)
+        };
+
+        const uploadArea = document.getElementById('unitsUploadArea');
+        uploadArea.classList.add('loaded');
+        document.getElementById('unitsUploadText').innerHTML = '✅ Unidades cargadas<br><small>' + unitsData.rows.length + ' registros</small>';
+        
+        hideLoading();
+        
+        if (cleanedData) {
+            performFuzzyMatching();
+        }
+
+    } catch (error) {
+        hideLoading();
+        showError(`Error al procesar archivo de unidades: ${error.message}`);
+    }
+}
+
+function performFuzzyMatching() {
+    if (!cleanedData || !unitsData) return;
+
+    showLoading('Realizando fuzzy matching...');
+
+    try {
+        // Buscar columna "Notificador" en reportes (Columna O)
+        const notificadorIdx = columnIndices.eventId; // Buscaremos la columna O manualmente
+        let reporterIdx = -1;
+        
+        // Buscar "Notificador" en los headers
+        for (let i = 0; i < cleanedData.headers.length; i++) {
+            const header = String(cleanedData.headers[i]).trim().toLowerCase();
+            if (header.includes('notificador')) {
+                reporterIdx = i;
+                break;
+            }
+        }
+        
+        if (reporterIdx === -1) {
+            hideLoading();
+            showError('No se encontró la columna "Notificador" en la planilla de reportes.');
+            return;
+        }
+
+        // Buscar columnas en planilla de unidades (asumiendo "Nombre" y "Unidad")
+        const nameIdx = unitsData.headers.findIndex(h => 
+            String(h).trim().toLowerCase().includes('nombre')
+        );
+        const unitIdx = unitsData.headers.findIndex(h => 
+            String(h).trim().toLowerCase().includes('unidad')
+        );
+
+        if (nameIdx === -1 || unitIdx === -1) {
+            hideLoading();
+            showError('No se encontraron las columnas "Nombre" y "Unidad" en la planilla de unidades.');
+            return;
+        }
+
+        // Crear fuzzy set
+        const nameToUnit = {};
+        const namesArray = [];
+        
+        unitsData.rows.forEach(row => {
+            const name = String(row[nameIdx] || '').trim();
+            const unit = String(row[unitIdx] || 'Sin unidad').trim();
+            if (name) {
+                nameToUnit[name.toLowerCase()] = unit;
+                namesArray.push(name);
+            }
+        });
+
+        const fuzzySet = FuzzySet(namesArray);
+        const threshold = 0.6; // Umbral de similitud
+
+        // Realizar matching
+        const reporterToUnit = {};
+        
+        cleanedData.rows.forEach(row => {
+            const reporter = String(row[reporterIdx] || '').trim();
+            if (!reporter) return;
+
+            const result = fuzzySet.get(reporter);
+            
+            if (result && result.length > 0) {
+                const score = result[0][0];
+                const matchedName = result[0][1];
+                const unit = nameToUnit[matchedName.toLowerCase()];
+                
+                if (score >= threshold) {
+                    reporterToUnit[reporter] = {
+                        unit: unit,
+                        matchedName: matchedName,
+                        score: score
+                    };
+                } else {
+                    reporterToUnit[reporter] = {
+                        unit: 'Sin match',
+                        matchedName: '-',
+                        score: score
+                    };
+                }
+            } else {
+                reporterToUnit[reporter] = {
+                    unit: 'Sin match',
+                    matchedName: '-',
+                    score: 0
+                };
+            }
+        });
+
+        fuzzyMatchResults = {
+            reporterToUnit: reporterToUnit,
+            reporterIdx: reporterIdx
+        };
+
+        const info = document.getElementById('fileInfo');
+        const matchedCount = Object.values(reporterToUnit).filter(m => m.unit !== 'Sin match').length;
+        const totalReporters = Object.keys(reporterToUnit).length;
+        
+        info.innerHTML += `<br><strong>Fuzzy Matching completado:</strong><br>• Reporteros únicos: ${totalReporters}<br>• Matches exitosos: ${matchedCount}<br>• Sin match: ${totalReporters - matchedCount}`;
+
+        hideLoading();
+
+    } catch (error) {
+        hideLoading();
+        showError(`Error en fuzzy matching: ${error.message}`);
+    }
+}
+
 function parseDate(dateStr) {
     if (!dateStr) return null;
     
@@ -1102,8 +1286,72 @@ function parseDate(dateStr) {
                 </div>
             `;
             
-            
+       // 4. Análisis por Unidad (si hay fuzzy matching)
+            if (fuzzyMatchResults) {
+                const { reporterToUnit, reporterIdx } = fuzzyMatchResults;
+                const unitData = {};
+                
+                cleanedData.rows.forEach(row => {
+                    const reporter = String(row[reporterIdx] || '').trim();
+                    const matchInfo = reporterToUnit[reporter];
+                    
+                    if (matchInfo && matchInfo.unit !== 'Sin match') {
+                        const unit = matchInfo.unit;
+                        const dateStr = row[dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate];
+                        const date = parseDate(dateStr);
+                        const period = getPeriodKey(date, analysisResults.periodType);
                         
+                        if (!unitData[unit]) {
+                            unitData[unit] = {};
+                        }
+                        if (!unitData[unit][period]) {
+                            unitData[unit][period] = 0;
+                        }
+                        unitData[unit][period]++;
+                    }
+                });
+                
+                const sortedUnits = Object.keys(unitData).sort();
+                
+                if (sortedUnits.length > 0) {
+                    html += `
+                        <div class="step collapsible-section">
+                            <h2 onclick="toggleSection('section4')" style="cursor:pointer;">
+                                <span id="icon-section4">▶</span> Reportes por Unidad
+                            </h2>
+                            <div id="section4" class="section-content" style="display:none;">
+                                <div class="preview">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Unidad</th>
+                                                ${sortedPeriods.map(p => `<th>${p}</th>`).join('')}
+                                                <th>TOTAL</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                    `;
+                    
+                    sortedUnits.forEach(unit => {
+                        html += `<tr><td><strong>${unit}</strong></td>`;
+                        let unitTotal = 0;
+                        sortedPeriods.forEach(period => {
+                            const count = unitData[unit][period] || 0;
+                            html += `<td>${count}</td>`;
+                            unitTotal += count;
+                        });
+                        html += `<td><strong>${unitTotal}</strong></td></tr>`;
+                    });
+                    
+                    html += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
                         
             return html;
         }
