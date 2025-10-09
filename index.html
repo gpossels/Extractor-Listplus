@@ -646,8 +646,12 @@ function handleUnitsFile(e) {
 
 function processUnitsFile() {
     try {
+        console.log('Starting processUnitsFile...');
         const firstSheet = unitsWorkbook.Sheets[unitsWorkbook.SheetNames[0]];
+        console.log('Got first sheet');
+        
         const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        console.log('Converted to JSON, rows:', jsonData.length);
         
         if (jsonData.length < 2) {
             hideLoading();
@@ -659,23 +663,28 @@ function processUnitsFile() {
             headers: jsonData[0],
             rows: jsonData.slice(1)
         };
+        
+        console.log('Headers:', unitsData.headers);
+        console.log('Rows count:', unitsData.rows.length);
 
         const uploadArea = document.getElementById('unitsUploadArea');
         uploadArea.classList.add('loaded');
         document.getElementById('unitsUploadText').innerHTML = '✅ Unidades cargadas<br><small>' + unitsData.rows.length + ' registros</small>';
         
-        hideLoading();
+        console.log('About to call performFuzzyMatching...');
         
         if (cleanedData) {
             performFuzzyMatching();
+        } else {
+            hideLoading();
         }
 
     } catch (error) {
+        console.error('Error in processUnitsFile:', error);
         hideLoading();
         showError(`Error al procesar archivo de unidades: ${error.message}`);
     }
 }
-
 function performFuzzyMatching() {
     if (!cleanedData || !unitsData) return;
 
