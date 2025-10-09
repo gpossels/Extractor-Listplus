@@ -1297,7 +1297,7 @@ function parseDate(dateStr) {
                     
                     if (matchInfo && matchInfo.unit !== 'Sin match') {
                         const unit = matchInfo.unit;
-                        const dateStr = row[dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate];
+                        const dateStr = row[analysisResults.dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate];
                         const date = parseDate(dateStr);
                         const period = getPeriodKey(date, analysisResults.periodType);
                         
