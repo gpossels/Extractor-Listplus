@@ -481,7 +481,7 @@ let fuzzyMatchResults = null;
                 hideLoading();
                 showError('Error al leer el archivo. Por favor, intenta nuevamente.');
             };
-            reader.refadAsArrayBuffer(file);
+            reader.readAsArrayBuffer(file);
         }
 
 function findColumnIndex(headers, possibleNames) {
