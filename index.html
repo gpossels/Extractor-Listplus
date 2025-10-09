@@ -481,7 +481,7 @@ let fuzzyMatchResults = null;
                 hideLoading();
                 showError('Error al leer el archivo. Por favor, intenta nuevamente.');
             };
-            reader.readAsArrayBuffer(file);
+            reader.refadAsArrayBuffer(file);
         }
 
 function findColumnIndex(headers, possibleNames) {
@@ -1316,33 +1316,52 @@ function parseDate(dateStr) {
                 
                 if (sortedUnits.length > 0) {
                     html += `
-                        <div class="step collapsible-section">
-                            <h2 onclick="toggleSection('section4')" style="cursor:pointer;">
-                                <span id="icon-section4">▶</span> Reportes por Unidad
-                            </h2>
-                            <div id="section4" class="section-content" style="display:none;">
-                                <div class="preview">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Unidad</th>
-                                                ${sortedPeriods.map(p => `<th>${p}</th>`).join('')}
-                                                <th>TOTAL</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                    `;
-                    
-                    sortedUnits.forEach(unit => {
-                        html += `<tr><td><strong>${unit}</strong></td>`;
-                        let unitTotal = 0;
-                        sortedPeriods.forEach(period => {
-                            const count = unitData[unit][period] || 0;
-                            html += `<td>${count}</td>`;
-                            unitTotal += count;
-                        });
-                        html += `<td><strong>${unitTotal}</strong></td></tr>`;
-                    });
+    <div class="step collapsible-section">
+        <h2 onclick="toggleSection('section4')" style="cursor:pointer;">
+            <span id="icon-section4">▶</span> Reportes por Unidad
+        </h2>
+        <div id="section4" class="section-content" style="display:none;">
+            <div class="preview">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Periodo</th>
+                            ${sortedUnits.map(u => `<th>${u}</th>`).join('')}
+                            <th>TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+`;
+
+sortedPeriods.forEach(period => {
+    html += `<tr><td><strong>${period}</strong></td>`;
+    let periodTotal = 0;
+    sortedUnits.forEach(unit => {
+        const count = unitData[unit][period] || 0;
+        html += `<td>${count}</td>`;
+        periodTotal += count;
+    });
+    html += `<td><strong>${periodTotal}</strong></td></tr>`;
+});
+
+// Totals row
+html += `<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>`;
+sortedUnits.forEach(unit => {
+    let unitTotal = 0;
+    sortedPeriods.forEach(period => {
+        unitTotal += unitData[unit][period] || 0;
+    });
+    html += `<td>${unitTotal}</td>`;
+});
+
+// Grand total
+let grandTotal = 0;
+sortedUnits.forEach(unit => {
+    sortedPeriods.forEach(period => {
+        grandTotal += unitData[unit][period] || 0;
+    });
+});
+html += `<td>${grandTotal}</td></tr>`;
                     
                     html += `
                                         </tbody>
