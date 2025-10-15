@@ -833,7 +833,7 @@ function performFuzzyMatching() {
         info.innerHTML += `<br><strong>Fuzzy Matching completado:</strong><br>• Reporteros únicos: ${totalReporters}<br>• Matches exitosos: ${matchedCount}<br>• Sin match: ${totalReporters - matchedCount}`;
 
         console.log('All done!');
-        hideLoading();
+        setTimeout(() => hideLoading(), 100);
 	}
         
     // Start the batch processing
