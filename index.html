@@ -418,6 +418,68 @@ let unitsWorkbook = null;
 let unitsData = null;
 let fuzzyMatchResults = null;
 
+// ADD THIS NEW SECTION:
+const DEFAULT_UNITS = [
+    'PABELLÓN CENTRAL',
+    'UNIDAD CORONARIA',
+    'HOSP. GINECO OBSTÉTRICA',
+    'ONCOLOGÍA ADULTO',
+    'NEONATOLOGÍA',
+    'PABELLÓN GINECO OBSTÉTRICO',
+    'FARMACIA URGENCIA',
+    'INTENSIVO ADULTO',
+    'SERVICIOS EXTERNOS',
+    'TOMA DE MUESTRA',
+    'INTERMEDIO ADULTO',
+    'CONSULTAS MÉDICAS',
+    'HOSP. MÉDICO QUIRÚRGICO 1',
+    'IMAGENOLOGÍA',
+    'ENTREGA DE RESULTADOS',
+    'HOSP. PEDIÁTRICA',
+    'INTERMEDIO PEDIÁTRICO',
+    'INFECCIONES INTRAHOSPITALARIAS',
+    'ESTERILIZACIÓN',
+    'LABORATORIO',
+    'KINESIOLOGÍA',
+    'RECUPERACIÓN',
+    'INTENSIVO PEDIÁTRICO',
+    'CONSULTA MÉDICA GINECOLÓGICA',
+    'NURSERY',
+    'UNIDAD DE MEDICINA TRANSFUSIONAL',
+    'ONCOLOGÍA AMBULATORIA',
+    'UNIDAD DE PRESUPUESTOS',
+    'DIRECCIÓN SERVICIOS GENERALES',
+    'VACUNATORIO',
+    'PABELLÓN HEMODINAMIA',
+    'SERVICIO AL CLIENTE',
+    'PROCEDIMIENTOS AMBULATORIOS',
+    'ENDOSCOPÍA',
+    'CALIDAD',
+    'PRE-QUIRÚRGICO',
+    'GESTIÓN DE CAMAS',
+    'HOSP. MÉDICO QUIRÚRGICO 2',
+    'NUTRICIÓN',
+    'HOSPITALIZACIÓN TRANSITORIA (CIRUGÍA)',
+    'ABASTECIMIENTO',
+    'UNIDAD DE ARCHIVO',
+    'CONSULTAS MEDICAS (CLINICOS)',
+    'PET-CT',
+    'ALIMENTACIÓN',
+    'INFORMÁTICA',
+    'ADMISIÓN',
+    'EQUIPOS MÉDICOS',
+    'ANATOMÍA PATOLÓGICA',
+    'EXTERNO ESTERILIZACIÓN',
+    'TRAUMATOLOGIA',
+    'EXTERNO HEMODINAMIA',
+    'CONTRALORÍA',
+    'EXTERNO FARMACIA',
+    'UROLOGIA',
+    'SUBDIRECCIÓN MÉDICA',
+    'SUBDIRECTORA DE ENFERMERÍA',
+    'CONSULTAS MEDICAS (ADMINISTRATIVO)'
+];
+
         document.getElementById('fileInput').addEventListener('change', handleFile);
         document.getElementById('unitsFileInput').addEventListener('change', handleUnitsFile);
        
@@ -830,7 +892,12 @@ function performFuzzyMatching() {
         const matchedCount = Object.values(reporterToUnit).filter(m => m.unit !== 'Sin match').length;
         const totalReporters = Object.keys(reporterToUnit).length;
         
-        info.innerHTML += `<br><strong>Fuzzy Matching completado:</strong><br>• Reporteros únicos: ${totalReporters}<br>• Matches exitosos: ${matchedCount}<br>• Sin match: ${totalReporters - matchedCount}`;
+        // MODIFIED: Count matches in default units
+        const matchedInDefaultUnits = Object.values(reporterToUnit).filter(m => 
+            m.unit !== 'Sin match' && DEFAULT_UNITS.includes(m.unit)
+        ).length;
+        
+        info.innerHTML += `<br><strong>Fuzzy Matching completado:</strong><br>• Reporteros únicos: ${totalReporters}<br>• Matches exitosos: ${matchedCount}<br>• En unidades seleccionadas: ${matchedInDefaultUnits}<br>• Sin match: ${totalReporters - matchedCount}`;
 
         console.log('All done!');
         setTimeout(() => hideLoading(), 100);
@@ -1403,21 +1470,26 @@ function parseDate(dateStr) {
                     
                     if (matchInfo && matchInfo.unit !== 'Sin match') {
                         const unit = matchInfo.unit;
-                        const dateStr = row[analysisResults.dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate];
-                        const date = parseDate(dateStr);
-                        const period = getPeriodKey(date, analysisResults.periodType);
                         
-                        if (!unitData[unit]) {
-                            unitData[unit] = {};
+                        // MODIFIED: Only process if unit is in DEFAULT_UNITS
+                        if (DEFAULT_UNITS.includes(unit)) {
+                            const dateStr = row[analysisResults.dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate];
+                            const date = parseDate(dateStr);
+                            const period = getPeriodKey(date, analysisResults.periodType);
+                            
+                            if (!unitData[unit]) {
+                                unitData[unit] = {};
+                            }
+                            if (!unitData[unit][period]) {
+                                unitData[unit][period] = 0;
+                            }
+                            unitData[unit][period]++;
                         }
-                        if (!unitData[unit][period]) {
-                            unitData[unit][period] = 0;
-                        }
-                        unitData[unit][period]++;
                     }
                 });
                 
-                const sortedUnits = Object.keys(unitData).sort();
+                // MODIFIED: Filter and sort only DEFAULT_UNITS that have data
+                const sortedUnits = DEFAULT_UNITS.filter(unit => unitData[unit]);
                 
                 if (sortedUnits.length > 0) {
                     html += `
