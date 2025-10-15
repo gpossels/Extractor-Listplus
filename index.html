@@ -1518,7 +1518,7 @@ function parseDate(dateStr) {
                 const sortedUnits = DEFAULT_UNITS.filter(unit => unitData[unit]);
                 
                 if (sortedUnits.length > 0) {
-                    html += `
+html += `
     <div class="step collapsible-section">
         <h2 onclick="toggleSection('section4')" style="cursor:pointer;">
             <span id="icon-section4">▶</span> Reportes por Unidad
@@ -1532,12 +1532,12 @@ function parseDate(dateStr) {
                 </select>
             </div>
             <div id="unitTableContainer" class="preview">
-                
-                                </div>
-                            </div>
-                        </div>
-                    `;
-					// MODIFIED: Store unitData globally for filtering
+            </div>
+        </div>
+    </div>
+`;
+                    
+                    // MODIFIED: Store unitData globally for filtering
                     window.currentUnitData = unitData;
                     window.currentSortedPeriods = sortedPeriods;
                 }
