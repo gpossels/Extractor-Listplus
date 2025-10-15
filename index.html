@@ -479,7 +479,26 @@ const DEFAULT_UNITS = [
     'SUBDIRECTORA DE ENFERMERÍA',
     'CONSULTAS MEDICAS (ADMINISTRATIVO)'
 ];
-
+// ADD THIS NEW SECTION:
+const UNIT_GROUPS = {
+    'Hospitalizados': [
+        'PABELLÓN CENTRAL',
+        'UNIDAD CORONARIA',
+        'HOSP. GINECO OBSTÉTRICA',
+        'ONCOLOGÍA ADULTO',
+        'NEONATOLOGÍA',
+        'PABELLÓN GINECO OBSTÉTRICO',
+        'INTENSIVO ADULTO',
+        'INTERMEDIO ADULTO',
+        'HOSP. MÉDICO QUIRÚRGICO 1',
+        'HOSP. PEDIÁTRICA',
+        'INTERMEDIO PEDIÁTRICO',
+        'RECUPERACIÓN',
+        'INTENSIVO PEDIÁTRICO',
+        'PABELLÓN HEMODINAMIA',
+        'HOSP. MÉDICO QUIRÚRGICO 2'
+    ]
+};
         document.getElementById('fileInput').addEventListener('change', handleFile);
         document.getElementById('unitsFileInput').addEventListener('change', handleUnitsFile);
        
@@ -1345,6 +1364,13 @@ function parseDate(dateStr) {
                 }, 100);
             }
             
+            // MODIFIED: Initialize unit table if fuzzy matching was done
+            if (fuzzyMatchResults && window.currentUnitData) {
+                setTimeout(() => {
+                    updateUnitTable();
+                }, 100);
+            }
+            
             document.getElementById('resultsStep').style.display = 'block';
             document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
         }
@@ -1498,59 +1524,95 @@ function parseDate(dateStr) {
             <span id="icon-section4">▶</span> Reportes por Unidad
         </h2>
         <div id="section4" class="section-content" style="display:none;">
-            <div class="preview">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Periodo</th>
-                            ${sortedUnits.map(u => `<th>${u}</th>`).join('')}
-                            <th>TOTAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-`;
-
-sortedPeriods.forEach(period => {
-    html += `<tr><td><strong>${period}</strong></td>`;
-    let periodTotal = 0;
-    sortedUnits.forEach(unit => {
-        const count = unitData[unit][period] || 0;
-        html += `<td>${count}</td>`;
-        periodTotal += count;
-    });
-    html += `<td><strong>${periodTotal}</strong></td></tr>`;
-});
-
-// Totals row
-html += `<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>`;
-sortedUnits.forEach(unit => {
-    let unitTotal = 0;
-    sortedPeriods.forEach(period => {
-        unitTotal += unitData[unit][period] || 0;
-    });
-    html += `<td>${unitTotal}</td>`;
-});
-
-// Grand total
-let grandTotal = 0;
-sortedUnits.forEach(unit => {
-    sortedPeriods.forEach(period => {
-        grandTotal += unitData[unit][period] || 0;
-    });
-});
-html += `<td>${grandTotal}</td></tr>`;
-                    
-                    html += `
-                                        </tbody>
-                                    </table>
+            <div class="control-group" style="margin-bottom: 20px;">
+                <label>Filtrar por grupo:</label>
+                <select id="unitGroupSelector" onchange="updateUnitTable()">
+                    <option value="all">Todas las unidades</option>
+                    <option value="Hospitalizados">Hospitalizados</option>
+                </select>
+            </div>
+            <div id="unitTableContainer" class="preview">
+                
                                 </div>
                             </div>
                         </div>
                     `;
+					// MODIFIED: Store unitData globally for filtering
+                    window.currentUnitData = unitData;
+                    window.currentSortedPeriods = sortedPeriods;
                 }
             }
                         
-            return html;
+           return html;
+        }
+        
+        // ADD THIS NEW FUNCTION:
+        function updateUnitTable() {
+            const selectedGroup = document.getElementById('unitGroupSelector').value;
+            const unitData = window.currentUnitData;
+            const sortedPeriods = window.currentSortedPeriods;
+            
+            if (!unitData || !sortedPeriods) return;
+            
+            // Determine which units to display
+            let unitsToDisplay;
+            if (selectedGroup === 'all') {
+                unitsToDisplay = DEFAULT_UNITS.filter(unit => unitData[unit]);
+            } else if (UNIT_GROUPS[selectedGroup]) {
+                unitsToDisplay = UNIT_GROUPS[selectedGroup].filter(unit => unitData[unit]);
+            } else {
+                unitsToDisplay = DEFAULT_UNITS.filter(unit => unitData[unit]);
+            }
+            
+            // Generate table HTML
+            let tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Periodo</th>
+                            ${unitsToDisplay.map(u => `<th>${u}</th>`).join('')}
+                            <th>TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            sortedPeriods.forEach(period => {
+                tableHtml += `<tr><td><strong>${period}</strong></td>`;
+                let periodTotal = 0;
+                unitsToDisplay.forEach(unit => {
+                    const count = unitData[unit][period] || 0;
+                    tableHtml += `<td>${count}</td>`;
+                    periodTotal += count;
+                });
+                tableHtml += `<td><strong>${periodTotal}</strong></td></tr>`;
+            });
+            
+            // Totals row
+            tableHtml += `<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>`;
+            unitsToDisplay.forEach(unit => {
+                let unitTotal = 0;
+                sortedPeriods.forEach(period => {
+                    unitTotal += unitData[unit][period] || 0;
+                });
+                tableHtml += `<td>${unitTotal}</td>`;
+            });
+            
+            // Grand total
+            let grandTotal = 0;
+            unitsToDisplay.forEach(unit => {
+                sortedPeriods.forEach(period => {
+                    grandTotal += unitData[unit][period] || 0;
+                });
+            });
+            tableHtml += `<td>${grandTotal}</td></tr>`;
+            
+            tableHtml += `
+                    </tbody>
+                </table>
+            `;
+            
+            document.getElementById('unitTableContainer').innerHTML = tableHtml;
         }
         
         function toggleSection(sectionId) {
