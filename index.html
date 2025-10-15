@@ -314,11 +314,13 @@
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
         }
+        
         .upload-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -332,22 +334,22 @@
         <div class="step">
             <h2>Paso 1: Cargar Archivo Excel</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
-        <div id="uploadText">
-            📁 Planilla de Reportes<br>
-            <small>Se eliminarán duplicados en "ID. Evento"</small>
-        </div>
-    </div>
-    
-    <div class="upload-area" id="unitsUploadArea" onclick="document.getElementById('unitsFileInput').click()">
-        <div id="unitsUploadText">
-            👥 Planilla de Unidades (Opcional)<br>
-            <small>Para análisis por unidad</small>
-        </div>
-    </div>
-</div>
-<input type="file" id="fileInput" accept=".xlsx,.xls">
-<input type="file" id="unitsFileInput" accept=".xlsx,.xls">
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <div id="uploadText">
+                        📁 Planilla de Reportes<br>
+                        <small>Se eliminarán duplicados en "ID. Evento"</small>
+                    </div>
+                </div>
+                
+                <div class="upload-area" id="unitsUploadArea" onclick="document.getElementById('unitsFileInput').click()">
+                    <div id="unitsUploadText">
+                        👥 Planilla de Unidades (Opcional)<br>
+                        <small>Para análisis por unidad</small>
+                    </div>
+                </div>
+            </div>
+            <input type="file" id="fileInput" accept=".xlsx,.xls">
+            <input type="file" id="unitsFileInput" accept=".xlsx,.xls">
             <div id="fileInfo" class="info-box" style="display:none;"></div>
             <div id="errorInfo" class="error-box" style="display:none;"></div>
         </div>
@@ -401,6 +403,44 @@
                 <h2>Paso 3: Resultados</h2>
                 <div id="statsContainer" class="stats"></div>
                 <div id="previewContainer" class="preview"></div>
+                
+                <!-- Collapsible sections with no tables -->
+                <div class="step collapsible-section" style="margin-top: 20px;">
+                    <h2 onclick="toggleSection('section1')" style="cursor:pointer;">
+                        <span id="icon-section1">▶</span> Incidentes por Servicio
+                    </h2>
+                    <div id="section1" class="section-content" style="display:none;">
+                        <p style="color: #666; font-style: italic;">Sección disponible para futura implementación</p>
+                    </div>
+                </div>
+                
+                <div class="step collapsible-section">
+                    <h2 onclick="toggleSection('section2')" style="cursor:pointer;">
+                        <span id="icon-section2">▶</span> Servicio por Evento
+                    </h2>
+                    <div id="section2" class="section-content" style="display:none;">
+                        <p style="color: #666; font-style: italic;">Sección disponible para futura implementación</p>
+                    </div>
+                </div>
+                
+                <div class="step collapsible-section">
+                    <h2 onclick="toggleSection('section3')" style="cursor:pointer;">
+                        <span id="icon-section3">▶</span> Análisis de Tipo de Vigilancia
+                    </h2>
+                    <div id="section3" class="section-content" style="display:none;">
+                        <p style="color: #666; font-style: italic;">Sección disponible para futura implementación</p>
+                    </div>
+                </div>
+                
+                <div class="step collapsible-section">
+                    <h2 onclick="toggleSection('section4')" style="cursor:pointer;">
+                        <span id="icon-section4">▶</span> Reportes por Unidad
+                    </h2>
+                    <div id="section4" class="section-content" style="display:none;">
+                        <p style="color: #666; font-style: italic;">Sección disponible para futura implementación</p>
+                    </div>
+                </div>
+                
                 <div class="action-buttons">
                     <button onclick="downloadExcel()">📥 Descargar Excel</button>
                     <button onclick="resetAnalysis()">🔄 Nuevo Análisis</button>
@@ -411,94 +451,94 @@
 
     <script>
         let workbook = null;
-let cleanedData = null;
-let analysisResults = null;
-let columnIndices = null;
-let unitsWorkbook = null;
-let unitsData = null;
-let fuzzyMatchResults = null;
+        let cleanedData = null;
+        let analysisResults = null;
+        let columnIndices = null;
+        let unitsWorkbook = null;
+        let unitsData = null;
+        let fuzzyMatchResults = null;
 
-// ADD THIS NEW SECTION:
-const DEFAULT_UNITS = [
-    'PABELLÓN CENTRAL',
-    'UNIDAD CORONARIA',
-    'HOSP. GINECO OBSTÉTRICA',
-    'ONCOLOGÍA ADULTO',
-    'NEONATOLOGÍA',
-    'PABELLÓN GINECO OBSTÉTRICO',
-    'FARMACIA URGENCIA',
-    'INTENSIVO ADULTO',
-    'SERVICIOS EXTERNOS',
-    'TOMA DE MUESTRA',
-    'INTERMEDIO ADULTO',
-    'CONSULTAS MÉDICAS',
-    'HOSP. MÉDICO QUIRÚRGICO 1',
-    'IMAGENOLOGÍA',
-    'ENTREGA DE RESULTADOS',
-    'HOSP. PEDIÁTRICA',
-    'INTERMEDIO PEDIÁTRICO',
-    'INFECCIONES INTRAHOSPITALARIAS',
-    'ESTERILIZACIÓN',
-    'LABORATORIO',
-    'KINESIOLOGÍA',
-    'RECUPERACIÓN',
-    'INTENSIVO PEDIÁTRICO',
-    'CONSULTA MÉDICA GINECOLÓGICA',
-    'NURSERY',
-    'UNIDAD DE MEDICINA TRANSFUSIONAL',
-    'ONCOLOGÍA AMBULATORIA',
-    'UNIDAD DE PRESUPUESTOS',
-    'DIRECCIÓN SERVICIOS GENERALES',
-    'VACUNATORIO',
-    'PABELLÓN HEMODINAMIA',
-    'SERVICIO AL CLIENTE',
-    'PROCEDIMIENTOS AMBULATORIOS',
-    'ENDOSCOPÍA',
-    'CALIDAD',
-    'PRE-QUIRÚRGICO',
-    'GESTIÓN DE CAMAS',
-    'HOSP. MÉDICO QUIRÚRGICO 2',
-    'NUTRICIÓN',
-    'HOSPITALIZACIÓN TRANSITORIA (CIRUGÍA)',
-    'ABASTECIMIENTO',
-    'UNIDAD DE ARCHIVO',
-    'CONSULTAS MEDICAS (CLINICOS)',
-    'PET-CT',
-    'ALIMENTACIÓN',
-    'INFORMÁTICA',
-    'ADMISIÓN',
-    'EQUIPOS MÉDICOS',
-    'ANATOMÍA PATOLÓGICA',
-    'EXTERNO ESTERILIZACIÓN',
-    'TRAUMATOLOGIA',
-    'EXTERNO HEMODINAMIA',
-    'CONTRALORÍA',
-    'EXTERNO FARMACIA',
-    'UROLOGIA',
-    'SUBDIRECCIÓN MÉDICA',
-    'SUBDIRECTORA DE ENFERMERÍA',
-    'CONSULTAS MEDICAS (ADMINISTRATIVO)'
-];
-// ADD THIS NEW SECTION:
-const UNIT_GROUPS = {
-    'Hospitalizados': [
-        'PABELLÓN CENTRAL',
-        'UNIDAD CORONARIA',
-        'HOSP. GINECO OBSTÉTRICA',
-        'ONCOLOGÍA ADULTO',
-        'NEONATOLOGÍA',
-        'PABELLÓN GINECO OBSTÉTRICO',
-        'INTENSIVO ADULTO',
-        'INTERMEDIO ADULTO',
-        'HOSP. MÉDICO QUIRÚRGICO 1',
-        'HOSP. PEDIÁTRICA',
-        'INTERMEDIO PEDIÁTRICO',
-        'RECUPERACIÓN',
-        'INTENSIVO PEDIÁTRICO',
-        'PABELLÓN HEMODINAMIA',
-        'HOSP. MÉDICO QUIRÚRGICO 2'
-    ]
-};
+        const DEFAULT_UNITS = [
+            'PABELLÓN CENTRAL',
+            'UNIDAD CORONARIA',
+            'HOSP. GINECO OBSTÉTRICA',
+            'ONCOLOGÍA ADULTO',
+            'NEONATOLOGÍA',
+            'PABELLÓN GINECO OBSTÉTRICO',
+            'FARMACIA URGENCIA',
+            'INTENSIVO ADULTO',
+            'SERVICIOS EXTERNOS',
+            'TOMA DE MUESTRA',
+            'INTERMEDIO ADULTO',
+            'CONSULTAS MÉDICAS',
+            'HOSP. MÉDICO QUIRÚRGICO 1',
+            'IMAGENOLOGÍA',
+            'ENTREGA DE RESULTADOS',
+            'HOSP. PEDIÁTRICA',
+            'INTERMEDIO PEDIÁTRICO',
+            'INFECCIONES INTRAHOSPITALARIAS',
+            'ESTERILIZACIÓN',
+            'LABORATORIO',
+            'KINESIOLOGÍA',
+            'RECUPERACIÓN',
+            'INTENSIVO PEDIÁTRICO',
+            'CONSULTA MÉDICA GINECOLÓGICA',
+            'NURSERY',
+            'UNIDAD DE MEDICINA TRANSFUSIONAL',
+            'ONCOLOGÍA AMBULATORIA',
+            'UNIDAD DE PRESUPUESTOS',
+            'DIRECCIÓN SERVICIOS GENERALES',
+            'VACUNATORIO',
+            'PABELLÓN HEMODINAMIA',
+            'SERVICIO AL CLIENTE',
+            'PROCEDIMIENTOS AMBULATORIOS',
+            'ENDOSCOPÍA',
+            'CALIDAD',
+            'PRE-QUIRÚRGICO',
+            'GESTIÓN DE CAMAS',
+            'HOSP. MÉDICO QUIRÚRGICO 2',
+            'NUTRICIÓN',
+            'HOSPITALIZACIÓN TRANSITORIA (CIRUGÍA)',
+            'ABASTECIMIENTO',
+            'UNIDAD DE ARCHIVO',
+            'CONSULTAS MEDICAS (CLINICOS)',
+            'PET-CT',
+            'ALIMENTACIÓN',
+            'INFORMÁTICA',
+            'ADMISIÓN',
+            'EQUIPOS MÉDICOS',
+            'ANATOMÍA PATOLÓGICA',
+            'EXTERNO ESTERILIZACIÓN',
+            'TRAUMATOLOGIA',
+            'EXTERNO HEMODINAMIA',
+            'CONTRALORÍA',
+            'EXTERNO FARMACIA',
+            'UROLOGIA',
+            'SUBDIRECCIÓN MÉDICA',
+            'SUBDIRECTORA DE ENFERMERÍA',
+            'CONSULTAS MEDICAS (ADMINISTRATIVO)'
+        ];
+
+        const UNIT_GROUPS = {
+            'Hospitalizados': [
+                'PABELLÓN CENTRAL',
+                'UNIDAD CORONARIA',
+                'HOSP. GINECO OBSTÉTRICA',
+                'ONCOLOGÍA ADULTO',
+                'NEONATOLOGÍA',
+                'PABELLÓN GINECO OBSTÉTRICO',
+                'INTENSIVO ADULTO',
+                'INTERMEDIO ADULTO',
+                'HOSP. MÉDICO QUIRÚRGICO 1',
+                'HOSP. PEDIÁTRICA',
+                'INTERMEDIO PEDIÁTRICO',
+                'RECUPERACIÓN',
+                'INTENSIVO PEDIÁTRICO',
+                'PABELLÓN HEMODINAMIA',
+                'HOSP. MÉDICO QUIRÚRGICO 2'
+            ]
+        };
+
         document.getElementById('fileInput').addEventListener('change', handleFile);
         document.getElementById('unitsFileInput').addEventListener('change', handleUnitsFile);
        
@@ -565,7 +605,7 @@ const UNIT_GROUPS = {
             reader.readAsArrayBuffer(file);
         }
 
-function findColumnIndex(headers, possibleNames) {
+        function findColumnIndex(headers, possibleNames) {
             for (let i = 0; i < headers.length; i++) {
                 const header = String(headers[i]).trim().toLowerCase();
                 for (let name of possibleNames) {
@@ -578,72 +618,69 @@ function findColumnIndex(headers, possibleNames) {
         }
 
         function validateHeaders(headers) {
-    const requiredColumns = {
-        eventId: ['id. evento', 'id evento'],
-        occurrenceDate: ['fecha de ocurrencia', 'fecha ocurrencia'],
-        notificationDate: ['fecha de notificación', 'fecha notificación', 'notificación', 'fecha notificacion', 'notificacion'],
-        classification: ['clasificación', 'clasificacion'],
-        serviceReported: ['servicio ocurrencia'],
-        serviceVerified: ['servicio de ocurrencia'],
-        vigilanceType: ['tipo de vigilancia'],
-        eventType: ['evento']
-    };
+            const requiredColumns = {
+                eventId: ['id. evento', 'id evento'],
+                occurrenceDate: ['fecha de ocurrencia', 'fecha ocurrencia'],
+                notificationDate: ['fecha de notificación', 'fecha notificación', 'notificación', 'fecha notificacion', 'notificacion'],
+                classification: ['clasificación', 'clasificacion'],
+                serviceReported: ['servicio ocurrencia'],
+                serviceVerified: ['servicio de ocurrencia'],
+                vigilanceType: ['tipo de vigilancia'],
+                eventType: ['evento']
+            };
 
-    const indices = {};
-    const missing = [];
+            const indices = {};
+            const missing = [];
 
-    // Buscar cada columna
-    for (let [key, names] of Object.entries(requiredColumns)) {
-        let index = -1;
-        
-        // Para eventType, buscar coincidencia exacta
-        if (key === 'eventType') {
-            for (let i = 0; i < headers.length; i++) {
-                if (String(headers[i]).trim().toLowerCase() === 'evento') {
-                    index = i;
-                    break;
+            for (let [key, names] of Object.entries(requiredColumns)) {
+                let index = -1;
+                
+                if (key === 'eventType') {
+                    for (let i = 0; i < headers.length; i++) {
+                        if (String(headers[i]).trim().toLowerCase() === 'evento') {
+                            index = i;
+                            break;
+                        }
+                    }
+                } 
+                else if (key === 'occurrenceDate') {
+                    for (let i = 0; i < headers.length; i++) {
+                        const header = String(headers[i]).trim().toLowerCase();
+                        if (header === 'fecha de ocurrencia' || header === 'fecha ocurrencia') {
+                            index = i;
+                            break;
+                        }
+                    }
+                }
+                else {
+                    index = findColumnIndex(headers, names);
+                }
+                
+                if (index === -1) {
+                    missing.push(names[0]);
+                } else {
+                    indices[key] = index;
                 }
             }
-        } 
-        // Para occurrenceDate, buscar coincidencia EXACTA también
-        else if (key === 'occurrenceDate') {
-            for (let i = 0; i < headers.length; i++) {
-                const header = String(headers[i]).trim().toLowerCase();
-                if (header === 'fecha de ocurrencia' || header === 'fecha ocurrencia') {
-                    index = i;
-                    break;
-                }
+            
+            if (missing.length > 0) {
+                return {
+                    valid: false,
+                    message: `No se encontraron las siguientes columnas requeridas:<br>• ${missing.join('<br>• ')}<br><br>Columnas encontradas: ${headers.join(', ')}`
+                };
             }
-        }
-        // Para el resto, usar findColumnIndex
-        else {
-            index = findColumnIndex(headers, names);
-        }
-        
-        if (index === -1) {
-            missing.push(names[0]);
-        } else {
-            indices[key] = index;
-        }
-    }
-    
-    if (missing.length > 0) {
-        return {
-            valid: false,
-            message: `No se encontraron las siguientes columnas requeridas:<br>• ${missing.join('<br>• ')}<br><br>Columnas encontradas: ${headers.join(', ')}`
-        };
-    }
 
-    return { valid: true, indices };
-}
+            return { valid: true, indices };
+        }
+
         function processFile() {
             try {
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-               const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
-    header: 1, 
-    raw: false,
-    cellDates: true  // Esto hace que las fechas se devuelvan como objetos Date
-});
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
+                    header: 1, 
+                    raw: false,
+                    cellDates: true
+                });
                 
                 if (jsonData.length < 2) {
                     hideLoading();
@@ -663,21 +700,20 @@ function findColumnIndex(headers, possibleNames) {
                 columnIndices = validation.indices;
                 const rows = jsonData.slice(1);
                 
-                // Eliminar duplicados por columna eventId
-const seen = new Set();
-const uniqueRows = rows.filter(row => {
-    const id = row[columnIndices.eventId];
-    if (!id || seen.has(id)) {
-        return false;
-    }
-    seen.add(id);
-    return true;
-});
+                const seen = new Set();
+                const uniqueRows = rows.filter(row => {
+                    const id = row[columnIndices.eventId];
+                    if (!id || seen.has(id)) {
+                        return false;
+                    }
+                    seen.add(id);
+                    return true;
+                });
 
                 cleanedData = {
-    headers: headers,
-    rows: uniqueRows
-};
+                    headers: headers,
+                    rows: uniqueRows
+                };
 
                 const uploadArea = document.getElementById('uploadArea');
                 uploadArea.classList.add('loaded');
@@ -685,13 +721,13 @@ const uniqueRows = rows.filter(row => {
                 document.getElementById('uploadText').innerHTML = '✅ Archivo cargado correctamente';
                 
                 const info = document.getElementById('fileInfo');
-info.style.display = 'block';
-info.innerHTML = `
-    <strong>Información del archivo:</strong><br>
-    • Filas originales: ${rows.length}<br>
-    • Duplicados eliminados: ${rows.length - uniqueRows.length}<br>
-    • Filas únicas: ${uniqueRows.length}
-`;
+                info.style.display = 'block';
+                info.innerHTML = `
+                    <strong>Información del archivo:</strong><br>
+                    • Filas originales: ${rows.length}<br>
+                    • Duplicados eliminados: ${rows.length - uniqueRows.length}<br>
+                    • Filas únicas: ${uniqueRows.length}
+                `;
                 document.getElementById('analysisStep').style.display = 'block';
                 hideLoading();
 
@@ -701,317 +737,271 @@ info.innerHTML = `
             }
         }
                 
-function handleUnitsFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+        function handleUnitsFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
-    showLoading('Cargando archivo de unidades...');
+            showLoading('Cargando archivo de unidades...');
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            unitsWorkbook = XLSX.read(data, { type: 'array' });
-            processUnitsFile();
-        } catch (error) {
-            hideLoading();
-            showError(`No se pudo leer el archivo de unidades: ${error.message}`);
-        }
-    };
-    reader.onerror = function() {
-        hideLoading();
-        showError('Error al leer el archivo de unidades.');
-    };
-    reader.readAsArrayBuffer(file);
-}
-
-function processUnitsFile() {
-    try {
-        console.log('Starting processUnitsFile...');
-        const firstSheet = unitsWorkbook.Sheets[unitsWorkbook.SheetNames[0]];
-        console.log('Got first sheet');
-        
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-        console.log('Converted to JSON, rows:', jsonData.length);
-        
-        if (jsonData.length < 2) {
-            hideLoading();
-            showError('El archivo de unidades no contiene datos suficientes.');
-            return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    unitsWorkbook = XLSX.read(data, { type: 'array' });
+                    processUnitsFile();
+                } catch (error) {
+                    hideLoading();
+                    showError(`No se pudo leer el archivo de unidades: ${error.message}`);
+                }
+            };
+            reader.onerror = function() {
+                hideLoading();
+                showError('Error al leer el archivo de unidades.');
+            };
+            reader.readAsArrayBuffer(file);
         }
 
-        unitsData = {
-            headers: jsonData[0],
-            rows: jsonData.slice(1)
-        };
-        
-        console.log('Headers:', unitsData.headers);
-        console.log('Rows count:', unitsData.rows.length);
-
-        const uploadArea = document.getElementById('unitsUploadArea');
-        uploadArea.classList.add('loaded');
-        document.getElementById('unitsUploadText').innerHTML = '✅ Unidades cargadas<br><small>' + unitsData.rows.length + ' registros</small>';
-        
-        console.log('About to call performFuzzyMatching...');
-        
-        if (cleanedData) {
-            performFuzzyMatching();
-        } else {
-            hideLoading();
-        }
-
-    } catch (error) {
-        console.error('Error in processUnitsFile:', error);
-        hideLoading();
-        showError(`Error al procesar archivo de unidades: ${error.message}`);
-    }
-}
-function performFuzzyMatching() {
-    if (!cleanedData || !unitsData) return;
-
-    showLoading('Realizando fuzzy matching...');
-    console.log('Starting fuzzy matching...');
-
-    try {
-        let reporterIdx = -1;
-        
-        for (let i = 0; i < cleanedData.headers.length; i++) {
-            const header = String(cleanedData.headers[i]).trim().toLowerCase();
-            if (header.includes('notificador')) {
-                reporterIdx = i;
-                break;
-            }
-        }
-        
-        console.log('Reporter index:', reporterIdx);
-        
-        if (reporterIdx === -1) {
-            hideLoading();
-            showError('No se encontró la columna "Notificador" en la planilla de reportes.');
-            return;
-        }
-
-        const nameIdx = unitsData.headers.findIndex(h => {
-            const header = String(h).trim().toLowerCase();
-            return header.includes('nombre') || header.includes('notificador');
-        });
-        const unitIdx = unitsData.headers.findIndex(h => 
-            String(h).trim().toLowerCase().includes('unidad')
-        );
-
-        console.log('Name index:', nameIdx, 'Unit index:', unitIdx);
-
-        if (nameIdx === -1 || unitIdx === -1) {
-            hideLoading();
-            showError('No se encontraron las columnas "Nombre/Notificador" y "Unidad" en la planilla de unidades.');
-            return;
-        }
-
-        console.log('Creating name mapping...');
-        const nameToUnit = {};
-        
-        unitsData.rows.forEach(row => {
-            const name = String(row[nameIdx] || '').trim().toLowerCase();
-            const unit = String(row[unitIdx] || 'Sin unidad').trim();
-            if (name) {
-                nameToUnit[name] = unit;
-            }
-        });
-
-        console.log('Name mapping created, total names:', Object.keys(nameToUnit).length);
-        console.log('Starting reporter matching...');
-        
-            
-        // Get unique reporters first to avoid duplicate work
-        const uniqueReporters = [...new Set(cleanedData.rows.map(row => String(row[reporterIdx] || '').trim()).filter(r => r))];
-        console.log('Unique reporters to match:', uniqueReporters.length);
-        
-        const reporterToUnit = {};
-        const namesArray = Object.keys(nameToUnit);
-        let processed = 0;
-        
-        // Process in batches to avoid UI freeze
-        function processBatch(startIdx) {
-            const batchSize = 50;
-            const endIdx = Math.min(startIdx + batchSize, uniqueReporters.length);
-            
-            for (let i = startIdx; i < endIdx; i++) {
-                const reporter = uniqueReporters[i];
-                const reporterLower = reporter.toLowerCase();
+        function processUnitsFile() {
+            try {
+                const firstSheet = unitsWorkbook.Sheets[unitsWorkbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
                 
-                // Buscar coincidencia exacta primero
-                if (nameToUnit[reporterLower]) {
-                    reporterToUnit[reporter] = {
-                        unit: nameToUnit[reporterLower],
-                        matchedName: reporter,
-                        score: 1.0
-                    };
+                if (jsonData.length < 2) {
+                    hideLoading();
+                    showError('El archivo de unidades no contiene datos suficientes.');
+                    return;
+                }
+
+                unitsData = {
+                    headers: jsonData[0],
+                    rows: jsonData.slice(1)
+                };
+
+                const uploadArea = document.getElementById('unitsUploadArea');
+                uploadArea.classList.add('loaded');
+                document.getElementById('unitsUploadText').innerHTML = '✅ Unidades cargadas<br><small>' + unitsData.rows.length + ' registros</small>';
+                
+                if (cleanedData) {
+                    performFuzzyMatching();
                 } else {
-                    // Buscar coincidencia parcial
-                    let bestMatch = null;
-                    let bestScore = 0;
-                    
-                    for (let j = 0; j < namesArray.length; j++) {
-                        const name = namesArray[j];
-                        const similarity = calculateSimilarity(reporterLower, name);
-                        if (similarity > bestScore && similarity > 0.6) {
-                            bestScore = similarity;
-                            bestMatch = name;
-                        }
-                    }
-                    
-                    if (bestMatch) {
-                        reporterToUnit[reporter] = {
-                            unit: nameToUnit[bestMatch],
-                            matchedName: bestMatch,
-                            score: bestScore
-                        };
-                    } else {
-                        reporterToUnit[reporter] = {
-                            unit: 'Sin match',
-                            matchedName: '-',
-                            score: 0
-                        };
+                    hideLoading();
+                }
+
+            } catch (error) {
+                hideLoading();
+                showError(`Error al procesar archivo de unidades: ${error.message}`);
+            }
+        }
+
+        function performFuzzyMatching() {
+            if (!cleanedData || !unitsData) return;
+
+            showLoading('Realizando fuzzy matching...');
+
+            try {
+                let reporterIdx = -1;
+                
+                for (let i = 0; i < cleanedData.headers.length; i++) {
+                    const header = String(cleanedData.headers[i]).trim().toLowerCase();
+                    if (header.includes('notificador')) {
+                        reporterIdx = i;
+                        break;
                     }
                 }
                 
-                processed++;
+                if (reporterIdx === -1) {
+                    hideLoading();
+                    showError('No se encontró la columna "Notificador" en la planilla de reportes.');
+                    return;
+                }
+
+                const nameIdx = unitsData.headers.findIndex(h => {
+                    const header = String(h).trim().toLowerCase();
+                    return header.includes('nombre') || header.includes('notificador');
+                });
+                const unitIdx = unitsData.headers.findIndex(h => 
+                    String(h).trim().toLowerCase().includes('unidad')
+                );
+
+                if (nameIdx === -1 || unitIdx === -1) {
+                    hideLoading();
+                    showError('No se encontraron las columnas "Nombre/Notificador" y "Unidad" en la planilla de unidades.');
+                    return;
+                }
+
+                const nameToUnit = {};
+                
+                unitsData.rows.forEach(row => {
+                    const name = String(row[nameIdx] || '').trim().toLowerCase();
+                    const unit = String(row[unitIdx] || 'Sin unidad').trim();
+                    if (name) {
+                        nameToUnit[name] = unit;
+                    }
+                });
+
+                const uniqueReporters = [...new Set(cleanedData.rows.map(row => String(row[reporterIdx] || '').trim()).filter(r => r))];
+                
+                const reporterToUnit = {};
+                const namesArray = Object.keys(nameToUnit);
+                let processed = 0;
+                
+                function processBatch(startIdx) {
+                    const batchSize = 50;
+                    const endIdx = Math.min(startIdx + batchSize, uniqueReporters.length);
+                    
+                    for (let i = startIdx; i < endIdx; i++) {
+                        const reporter = uniqueReporters[i];
+                        const reporterLower = reporter.toLowerCase();
+                        
+                        if (nameToUnit[reporterLower]) {
+                            reporterToUnit[reporter] = {
+                                unit: nameToUnit[reporterLower],
+                                matchedName: reporter,
+                                score: 1.0
+                            };
+                        } else {
+                            let bestMatch = null;
+                            let bestScore = 0;
+                            
+                            for (let j = 0; j < namesArray.length; j++) {
+                                const name = namesArray[j];
+                                const similarity = calculateSimilarity(reporterLower, name);
+                                if (similarity > bestScore && similarity > 0.6) {
+                                    bestScore = similarity;
+                                    bestMatch = name;
+                                }
+                            }
+                            
+                            if (bestMatch) {
+                                reporterToUnit[reporter] = {
+                                    unit: nameToUnit[bestMatch],
+                                    matchedName: bestMatch,
+                                    score: bestScore
+                                };
+                            } else {
+                                reporterToUnit[reporter] = {
+                                    unit: 'Sin match',
+                                    matchedName: '-',
+                                    score: 0
+                                };
+                            }
+                        }
+                        
+                        processed++;
+                    }
+                    
+                    const loadingOverlay = document.getElementById('loadingOverlay');
+                    if (loadingOverlay) {
+                        const percent = Math.round((processed / uniqueReporters.length) * 100);
+                        loadingOverlay.querySelector('.loading-content div:last-child').textContent = 
+                            `Realizando fuzzy matching... ${percent}% (${processed}/${uniqueReporters.length})`;
+                    }
+
+                    if (endIdx < uniqueReporters.length) {
+                        setTimeout(() => processBatch(endIdx), 0);
+                    } else {
+                        finishMatching();
+                    }
+                }
+                
+                function finishMatching() {
+                    fuzzyMatchResults = {
+                        reporterToUnit: reporterToUnit,
+                        reporterIdx: reporterIdx
+                    };
+
+                    const info = document.getElementById('fileInfo');
+                    const matchedCount = Object.values(reporterToUnit).filter(m => m.unit !== 'Sin match').length;
+                    const totalReporters = Object.keys(reporterToUnit).length;
+                    
+                    const matchedInDefaultUnits = Object.values(reporterToUnit).filter(m => 
+                        m.unit !== 'Sin match' && DEFAULT_UNITS.includes(m.unit)
+                    ).length;
+                    
+                    info.innerHTML += `<br><strong>Fuzzy Matching completado:</strong><br>• Reporteros únicos: ${totalReporters}<br>• Matches exitosos: ${matchedCount}<br>• En unidades seleccionadas: ${matchedInDefaultUnits}<br>• Sin match: ${totalReporters - matchedCount}`;
+
+                    setTimeout(() => hideLoading(), 100);
+                }
+                
+                processBatch(0);
+
+            } catch (error) {
+                hideLoading();
+                showError(`Error en fuzzy matching: ${error.message}`);
+            }
+        }
+
+        function calculateSimilarity(str1, str2) {
+            const longer = str1.length > str2.length ? str1 : str2;
+            const shorter = str1.length > str2.length ? str2 : str1;
+            
+            if (longer.length === 0) return 1.0;
+            
+            if (str1 === str2) return 1.0;
+            if (longer.includes(shorter)) return 0.85;
+            
+            const lengthDiff = longer.length - shorter.length;
+            if (lengthDiff > shorter.length * 0.5) return 0;
+            
+            const maxDistance = Math.floor(longer.length * 0.4);
+            let prevRow = new Array(shorter.length + 1);
+            
+            for (let j = 0; j <= shorter.length; j++) {
+                prevRow[j] = j;
             }
             
-            console.log('Processed', processed, 'of', uniqueReporters.length, 'reporters');
+            for (let i = 1; i <= longer.length; i++) {
+                let currentRow = [i];
+                let minInRow = i;
+                
+                for (let j = 1; j <= shorter.length; j++) {
+                    const cost = longer[i - 1] === shorter[j - 1] ? 0 : 1;
+                    const value = Math.min(
+                        prevRow[j] + 1,
+                        currentRow[j - 1] + 1,
+                        prevRow[j - 1] + cost
+                    );
+                    currentRow.push(value);
+                    minInRow = Math.min(minInRow, value);
+                }
+                
+                if (minInRow > maxDistance) return 0;
+                
+                prevRow = currentRow;
+            }
             
-// Update loading message with progress
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            if (loadingOverlay) {
-                const percent = Math.round((processed / uniqueReporters.length) * 100);
-                loadingOverlay.querySelector('.loading-content div:last-child').textContent = 
-                    `Realizando fuzzy matching... ${percent}% (${processed}/${uniqueReporters.length})`;
+            return 1 - (prevRow[shorter.length] / longer.length);
+        }
+
+        function parseDate(dateStr) {
+            if (!dateStr) return null;
+            
+            if (dateStr instanceof Date && !isNaN(dateStr)) {
+                return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate());
             }
-
-
-            if (endIdx < uniqueReporters.length) {
-                // Continue with next batch
-                setTimeout(() => processBatch(endIdx), 0);
-            } else {
-                // Finished!
-                finishMatching();
+            
+            const dateString = String(dateStr).trim();
+            
+            const match = dateString.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+            if (match) {
+                const day = parseInt(match[1]);
+                const month = parseInt(match[2]) - 1;
+                const year = parseInt(match[3]);
+                
+                if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+                    return new Date(year, month, day);
+                }
             }
+            
+            const date = new Date(dateString);
+            if (!isNaN(date.getTime())) {
+                return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            }
+            
+            return null;
         }
-        
-        function finishMatching() {
-
-        console.log('Matching complete!');
-
-        fuzzyMatchResults = {
-            reporterToUnit: reporterToUnit,
-            reporterIdx: reporterIdx
-        };
-
-        const info = document.getElementById('fileInfo');
-        const matchedCount = Object.values(reporterToUnit).filter(m => m.unit !== 'Sin match').length;
-        const totalReporters = Object.keys(reporterToUnit).length;
-        
-        // MODIFIED: Count matches in default units
-        const matchedInDefaultUnits = Object.values(reporterToUnit).filter(m => 
-            m.unit !== 'Sin match' && DEFAULT_UNITS.includes(m.unit)
-        ).length;
-        
-        info.innerHTML += `<br><strong>Fuzzy Matching completado:</strong><br>• Reporteros únicos: ${totalReporters}<br>• Matches exitosos: ${matchedCount}<br>• En unidades seleccionadas: ${matchedInDefaultUnits}<br>• Sin match: ${totalReporters - matchedCount}`;
-
-        console.log('All done!');
-        setTimeout(() => hideLoading(), 100);
-	}
-        
-    // Start the batch processing
-    processBatch(0);
-
-    } catch (error) {
-        console.error('Error in fuzzy matching:', error);
-        hideLoading();
-        showError(`Error en fuzzy matching: ${error.message}`);
-    }
-}
-
-// Simple similarity function
-function calculateSimilarity(str1, str2) {
-    const longer = str1.length > str2.length ? str1 : str2;
-    const shorter = str1.length > str2.length ? str2 : str1;
-    
-    if (longer.length === 0) return 1.0;
-    
-    // Quick checks first (fastest)
-    if (str1 === str2) return 1.0;
-    if (longer.includes(shorter)) return 0.85;
-    
-    // Check if length difference is too large (early exit)
-    const lengthDiff = longer.length - shorter.length;
-    if (lengthDiff > shorter.length * 0.5) return 0;
-    
-    // Optimized Levenshtein with early exit
-    const maxDistance = Math.floor(longer.length * 0.4); // Stop if distance > 40%
-    let prevRow = new Array(shorter.length + 1);
-    
-    for (let j = 0; j <= shorter.length; j++) {
-        prevRow[j] = j;
-    }
-    
-    for (let i = 1; i <= longer.length; i++) {
-        let currentRow = [i];
-        let minInRow = i;
-        
-        for (let j = 1; j <= shorter.length; j++) {
-            const cost = longer[i - 1] === shorter[j - 1] ? 0 : 1;
-            const value = Math.min(
-                prevRow[j] + 1,      // deletion
-                currentRow[j - 1] + 1, // insertion
-                prevRow[j - 1] + cost  // substitution
-            );
-            currentRow.push(value);
-            minInRow = Math.min(minInRow, value);
-        }
-        
-        // Early exit if this row is too far
-        if (minInRow > maxDistance) return 0;
-        
-        prevRow = currentRow;
-    }
-    
-    return 1 - (prevRow[shorter.length] / longer.length);
-}       
-function parseDate(dateStr) {
-    if (!dateStr) return null;
-    
-    // Si ya es un objeto Date válido
-    if (dateStr instanceof Date && !isNaN(dateStr)) {
-        return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate());
-    }
-    
-    // Si es un string, intentar parsearlo
-    const dateString = String(dateStr).trim();
-    
-    // Formato DD-MM-YYYY o D-M-YYYY
-    const match = dateString.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
-    if (match) {
-        const day = parseInt(match[1]);
-        const month = parseInt(match[2]) - 1;
-        const year = parseInt(match[3]);
-        
-        if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
-            return new Date(year, month, day);
-        }
-    }
-    
-    // Intentar parseo estándar
-    const date = new Date(dateString);
-    if (!isNaN(date.getTime())) {
-        return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    }
-    
-    return null;
-}        
         
         function getWeekNumber(date) {
-            // Calcular en zona horaria de Chile
             const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
             const dayNum = d.getDay() || 7;
             d.setDate(d.getDate() + 4 - dayNum);
@@ -1049,13 +1039,11 @@ function parseDate(dateStr) {
             }
         }
 
-            function sortPeriods(periods, periodType) {
+        function sortPeriods(periods, periodType) {
             return periods.sort((a, b) => {
-                // Extraer año y otros componentes
                 const parseA = a.split('-');
                 const parseB = b.split('-');
                 
-                // Comparar año primero
                 const yearA = parseInt(parseA[0]) || 0;
                 const yearB = parseInt(parseB[0]) || 0;
                 
@@ -1063,7 +1051,6 @@ function parseDate(dateStr) {
                     return yearA - yearB;
                 }
                 
-                // Si es por mes, ordenar por número de mes
                 if (periodType === 'month' && parseA.length > 1) {
                     const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
                     const monthA = monthNames.indexOf(parseA[1]);
@@ -1071,7 +1058,6 @@ function parseDate(dateStr) {
                     return monthA - monthB;
                 }
                 
-                // Para semestre, trimestre, cuatrimestre, semana - ordenar por número
                 if (parseA.length > 1) {
                     const numA = parseInt(parseA[1].replace(/\D/g, '')) || 0;
                     const numB = parseInt(parseB[1].replace(/\D/g, '')) || 0;
@@ -1082,9 +1068,9 @@ function parseDate(dateStr) {
             });
         }
         
-            function analyzeData() {
-                try {
-                    showLoading('Analizando datos...');
+        function analyzeData() {
+            try {
+                showLoading('Analizando datos...');
 
                 const periodType = document.getElementById('periodType').value;
                 const dateType = document.querySelector('input[name="dateType"]:checked').value;
@@ -1092,164 +1078,53 @@ function parseDate(dateStr) {
                 
                 const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
                 const classificationColIndex = columnIndices.classification;
-                const serviceReportedColIndex = columnIndices.serviceReported;
-                const serviceVerifiedColIndex = columnIndices.serviceVerified;
-                const vigilanceTypeColIndex = columnIndices.vigilanceType;
-                const eventTypeColIndex = columnIndices.eventType;
             
-            const classifications = ['Descarte', 'Incidente', 'Near Miss', 'Adverso', 'Centinela', 'Sin clasificación'];
-            const periodData = {};
-            const serviceClassificationData = {};
-            const serviceEventData = {};
-            const vigilanceData = {};
-            const serviceComparisonData = {};
+                const classifications = ['Descarte', 'Incidente', 'Near Miss', 'Adverso', 'Centinela', 'Sin clasificación'];
+                const periodData = {};
             
-            cleanedData.rows.forEach((row, index) => {
-                const dateStr = row[dateColIndex];
-                
-                // Debug: ver las primeras 5 fechas
-                if (index < 5) {
-                    console.log(`Fila ${index}: dateStr =`, dateStr, 'tipo:', typeof dateStr);
-                }
-                
-                let classification = row[classificationColIndex];
-                let serviceVerified = row[serviceVerifiedColIndex] || 'Sin servicio';
-                let serviceReported = row[serviceReportedColIndex] || 'Sin servicio';
-                let vigilanceType = row[vigilanceTypeColIndex] || 'Sin tipo';
-                let eventType = row[eventTypeColIndex] || 'Sin evento';
-                
-                // Si la clasificación está vacía, asignar "Sin clasificación"
-                if (!classification || classification.toString().trim() === '') {
-                    classification = 'Sin clasificación';
-                }
-                
-                if (serviceVerified && serviceVerified.toString().trim() === '') {
-                    serviceVerified = 'Sin servicio';
-                }
-                
-                if (serviceReported && serviceReported.toString().trim() === '') {
-                    serviceReported = 'Sin servicio';
-                }
-                
-                if (vigilanceType && vigilanceType.toString().trim() === '') {
-                    vigilanceType = 'Sin tipo';
-                }
-                
-                if (eventType && eventType.toString().trim() === '') {
-                    eventType = 'Sin evento';
-                }
-                
-                const date = parseDate(dateStr);
-                const period = getPeriodKey(date, periodType);
-                
-                // Análisis de clasificaciones por periodo
-                if (!periodData[period]) {
-                    periodData[period] = {
-                        'Descarte': 0,
-                        'Incidente': 0,
-                        'Near Miss': 0,
-                        'Adverso': 0,
-                        'Centinela': 0,
-                        'Sin clasificación': 0,
-                        'TOTAL': 0
-                    };
-                }
-                
-                if (classifications.includes(classification)) {
-                    periodData[period][classification]++;
-                    periodData[period]['TOTAL']++;
-                } else {
-                    periodData[period]['TOTAL']++;
-                }
-                
-                // Análisis de clasificación por servicio verificado
-                if (!serviceClassificationData[period]) {
-                    serviceClassificationData[period] = {};
-                }
-                if (!serviceClassificationData[period][serviceVerified]) {
-                    serviceClassificationData[period][serviceVerified] = {
-                        'Descarte': 0,
-                        'Incidente': 0,
-                        'Near Miss': 0,
-                        'Adverso': 0,
-                        'Centinela': 0,
-                        'Sin clasificación': 0,
-                        'TOTAL': 0
-                    };
-                }
-                if (classifications.includes(classification)) {
-                    serviceClassificationData[period][serviceVerified][classification]++;
-                }
-                serviceClassificationData[period][serviceVerified]['TOTAL']++;
-                
-                // Análisis de servicio por evento (reorganizado)
-                if (!serviceEventData[serviceVerified]) {
-                    serviceEventData[serviceVerified] = {};
-                }
-                if (!serviceEventData[serviceVerified][period]) {
-                    serviceEventData[serviceVerified][period] = {};
-                }
-                if (!serviceEventData[serviceVerified][period][eventType]) {
-                    serviceEventData[serviceVerified][period][eventType] = 0;
-                }
-                serviceEventData[serviceVerified][period][eventType]++;
-                
-                // Análisis de tipo de vigilancia
-                if (!vigilanceData[period]) {
-                    vigilanceData[period] = {
-                        'Pasiva': 0,
-                        'Activa': 0,
-                        'Otros': 0,
-                        'TOTAL': 0
-                    };
-                }
-                if (vigilanceType === 'Pasiva' || vigilanceType === 'Activa') {
-                    vigilanceData[period][vigilanceType]++;
-                } else {
-                    vigilanceData[period]['Otros']++;
-                }
-                vigilanceData[period]['TOTAL']++;
-                
-                // Análisis de comparación de servicios
-                if (!serviceComparisonData[period]) {
-                    serviceComparisonData[period] = {};
-                }
-                if (!serviceComparisonData[period][serviceReported]) {
-                    serviceComparisonData[period][serviceReported] = {
-                        reported: 0,
-                        verified: {},
-                        matches: 0
-                    };
-                }
-                serviceComparisonData[period][serviceReported].reported++;
-                
-                if (!serviceComparisonData[period][serviceReported].verified[serviceVerified]) {
-                    serviceComparisonData[period][serviceReported].verified[serviceVerified] = 0;
-                }
-                serviceComparisonData[period][serviceReported].verified[serviceVerified]++;
-                
-                if (serviceReported === serviceVerified) {
-                    serviceComparisonData[period][serviceReported].matches++;
-                }
-            });
+                cleanedData.rows.forEach((row, index) => {
+                    const dateStr = row[dateColIndex];
+                    let classification = row[classificationColIndex];
+                    
+                    if (!classification || classification.toString().trim() === '') {
+                        classification = 'Sin clasificación';
+                    }
+                    
+                    const date = parseDate(dateStr);
+                    const period = getPeriodKey(date, periodType);
+                    
+                    if (!periodData[period]) {
+                        periodData[period] = {
+                            'Descarte': 0,
+                            'Incidente': 0,
+                            'Near Miss': 0,
+                            'Adverso': 0,
+                            'Centinela': 0,
+                            'Sin clasificación': 0,
+                            'TOTAL': 0
+                        };
+                    }
+                    
+                    if (classifications.includes(classification)) {
+                        periodData[period][classification]++;
+                        periodData[period]['TOTAL']++;
+                    } else {
+                        periodData[period]['TOTAL']++;
+                    }
+                });
             
-            // Ordenar periodos
-            const sortedPeriods = sortPeriods(Object.keys(periodData), periodType);
+                const sortedPeriods = sortPeriods(Object.keys(periodData), periodType);
             
-            analysisResults = {
-                periodType,
-                dateType,
-                orientation,
-                periodData,
-                sortedPeriods,
-                classifications,
-                serviceClassificationData,
-                serviceEventData,
-                vigilanceData,
-                serviceComparisonData
-            };
+                analysisResults = {
+                    periodType,
+                    dateType,
+                    orientation,
+                    periodData,
+                    sortedPeriods,
+                    classifications
+                };
             
-         displayResults();
+                displayResults();
                 hideLoading();
 
             } catch (error) {
@@ -1261,7 +1136,6 @@ function parseDate(dateStr) {
         function displayResults() {
             const { periodData, sortedPeriods, classifications, orientation } = analysisResults;
             
-            // Calcular estadísticas generales
             let totalEvents = 0;
             const classificationTotals = {};
             classifications.forEach(c => classificationTotals[c] = 0);
@@ -1273,7 +1147,6 @@ function parseDate(dateStr) {
                 });
             });
             
-            // Mostrar estadísticas
             const statsHtml = `
                 <div class="stat-card">
                     <div class="stat-value">${totalEvents}</div>
@@ -1288,7 +1161,6 @@ function parseDate(dateStr) {
             `;
             document.getElementById('statsContainer').innerHTML = statsHtml;
             
-            // Generar tabla principal colapsable
             let tableHtml = `
                 <div class="step collapsible-section">
                     <h2 onclick="toggleSection('mainTable')" style="cursor:pointer;">
@@ -1299,8 +1171,7 @@ function parseDate(dateStr) {
                             <table>
             `;
             
-           if (orientation === 'rows') {
-                // Periodos como filas
+            if (orientation === 'rows') {
                 tableHtml += '<thead><tr><th>Periodo</th>';
                 classifications.forEach(c => tableHtml += `<th>${c}<button class="copy-btn" onclick="copyColumn(event, '${c}')">copiar</button></th>`);
                 tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyColumn(event, \'TOTAL\')">copiar</button></th></tr></thead><tbody>';
@@ -1313,15 +1184,13 @@ function parseDate(dateStr) {
                     tableHtml += `<td data-col="TOTAL"><strong>${periodData[period]['TOTAL']}</strong></td></tr>`;
                 });
                 
-                // Fila de totales
                 tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;" data-row="TOTAL"><td>TOTAL<button class="row-copy-btn" onclick="copyRow(event, \'TOTAL\')">copiar</button></td>';
                 classifications.forEach(c => {
                     tableHtml += `<td data-col="${c}">${classificationTotals[c]}</td>`;
                 });
                 tableHtml += `<td data-col="TOTAL">${totalEvents}</td></tr>`;
                                                 
-           } else {
-                // Periodos como columnas
+            } else {
                 tableHtml += '<thead><tr><th>Clasificación</th>';
                 sortedPeriods.forEach(p => tableHtml += `<th>${p}<button class="copy-btn" onclick="copyColumn(event, '${p}')">copiar</button></th>`);
                 tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyColumn(event, \'TOTAL\')">copiar</button></th></tr></thead><tbody>';
@@ -1334,7 +1203,6 @@ function parseDate(dateStr) {
                     tableHtml += `<td data-col="TOTAL"><strong>${classificationTotals[c]}</strong></td></tr>`;
                 });
                 
-                // Fila de totales
                 tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;" data-row="TOTAL"><td>TOTAL<button class="row-copy-btn" onclick="copyRow(event, \'TOTAL\')">copiar</button></td>';
                 sortedPeriods.forEach(period => {
                     tableHtml += `<td data-col="${period}">${periodData[period]['TOTAL']}</td>`;
@@ -1351,268 +1219,8 @@ function parseDate(dateStr) {
             `;
             
             document.getElementById('previewContainer').innerHTML = tableHtml;
-            
-           // Agregar análisis adicionales
-            const additionalAnalysisHtml = displayAdditionalAnalysis();
-            document.getElementById('previewContainer').innerHTML += additionalAnalysisHtml;
-            
-            // Inicializar las tablas con dropdown
-            if (Object.keys(analysisResults.serviceEventData).length > 0) {
-                setTimeout(() => {
-                    updateServiceClassificationTable();
-                    updateServiceEventTable();
-                }, 100);
-            }
-            
-            // MODIFIED: Initialize unit table if fuzzy matching was done
-            if (fuzzyMatchResults && window.currentUnitData) {
-                setTimeout(() => {
-                    updateUnitTable();
-                }, 100);
-            }
-            
             document.getElementById('resultsStep').style.display = 'block';
             document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
-        }
-    
-        function displayAdditionalAnalysis() {
-            const { sortedPeriods, classifications, serviceClassificationData, serviceEventData, vigilanceData, serviceComparisonData } = analysisResults;
-            
-            let html = '';
-            
-            // 1. Incidentes por Servicio
-            const allServicesForClassification = new Set();
-            sortedPeriods.forEach(period => {
-                Object.keys(serviceClassificationData[period] || {}).forEach(service => {
-                    allServicesForClassification.add(service);
-                });
-            });
-            const sortedServicesForClassification = Array.from(allServicesForClassification).sort();
-            
-            html += `
-                <div class="step collapsible-section">
-                    <h2 onclick="toggleSection('section1')" style="cursor:pointer;">
-                        <span id="icon-section1">▶</span> Incidentes por Servicio
-                    </h2>
-                    <div id="section1" class="section-content" style="display:none;">
-                        <div class="control-group" style="margin-bottom: 20px;">
-                            <label>Seleccionar Servicio:</label>
-                            <select id="serviceClassificationSelector" onchange="updateServiceClassificationTable()">
-                                ${sortedServicesForClassification.map(service => `<option value="${service}">${service}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div id="serviceClassificationTableContainer" class="preview">
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // 2. Servicio por Evento
-            const allServices = Object.keys(serviceEventData).sort();
-            const allEvents = new Set();
-            allServices.forEach(service => {
-                Object.values(serviceEventData[service] || {}).forEach(periodData => {
-                    Object.keys(periodData).forEach(event => allEvents.add(event));
-                });
-            });
-            const sortedEvents = Array.from(allEvents).sort();
-            
-            html += `
-                <div class="step collapsible-section">
-                    <h2 onclick="toggleSection('section2')" style="cursor:pointer;">
-                        <span id="icon-section2">▶</span> Servicio por Evento
-                    </h2>
-                    <div id="section2" class="section-content" style="display:none;">
-                        <div class="control-group" style="margin-bottom: 20px;">
-                            <label>Seleccionar Servicio:</label>
-                            <select id="serviceSelector" onchange="updateServiceEventTable()">
-                                ${allServices.map(service => `<option value="${service}">${service}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div id="serviceEventTableContainer" class="preview">
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // 3. Tipo de Vigilancia
-            html += `
-                <div class="step collapsible-section">
-                    <h2 onclick="toggleSection('section3')" style="cursor:pointer;">
-                        <span id="icon-section3">▶</span> Análisis de Tipo de Vigilancia
-                    </h2>
-                    <div id="section3" class="section-content" style="display:none;">
-                        <div class="preview">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Periodo</th>
-                                        <th>% Pasiva</th>
-                                        <th>% Activa</th>
-                                        <th>Pasiva</th>
-                                        <th>Activa</th>
-                                        <th>Sin datos</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-            `;
-            
-            sortedPeriods.forEach(period => {
-                const pasiva = vigilanceData[period].Pasiva;
-                const activa = vigilanceData[period].Activa;
-                const otros = vigilanceData[period].Otros;
-                const total = vigilanceData[period].TOTAL;
-                const pctPasiva = total > 0 ? ((pasiva / total) * 100).toFixed(1) : '0.0';
-                const pctActiva = total > 0 ? ((activa / total) * 100).toFixed(1) : '0.0';
-                
-                html += `
-                    <tr>
-                        <td><strong>${period}</strong></td>
-                        <td>${pctPasiva}%</td>
-                        <td>${pctActiva}%</td>
-                        <td>${pasiva}</td>
-                        <td>${activa}</td>
-                        <td>${otros}</td>
-                    </tr>
-                `;
-            });
-            
-            html += `
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-       // 4. Análisis por Unidad (si hay fuzzy matching)
-            if (fuzzyMatchResults) {
-                const { reporterToUnit, reporterIdx } = fuzzyMatchResults;
-                const unitData = {};
-                
-                cleanedData.rows.forEach(row => {
-                    const reporter = String(row[reporterIdx] || '').trim();
-                    const matchInfo = reporterToUnit[reporter];
-                    
-                    if (matchInfo && matchInfo.unit !== 'Sin match') {
-                        const unit = matchInfo.unit;
-                        
-                        // MODIFIED: Only process if unit is in DEFAULT_UNITS
-                        if (DEFAULT_UNITS.includes(unit)) {
-                            const dateStr = row[analysisResults.dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate];
-                            const date = parseDate(dateStr);
-                            const period = getPeriodKey(date, analysisResults.periodType);
-                            
-                            if (!unitData[unit]) {
-                                unitData[unit] = {};
-                            }
-                            if (!unitData[unit][period]) {
-                                unitData[unit][period] = 0;
-                            }
-                            unitData[unit][period]++;
-                        }
-                    }
-                });
-                
-                // MODIFIED: Filter and sort only DEFAULT_UNITS that have data
-                const sortedUnits = DEFAULT_UNITS.filter(unit => unitData[unit]);
-                
-                if (sortedUnits.length > 0) {
-html += `
-    <div class="step collapsible-section">
-        <h2 onclick="toggleSection('section4')" style="cursor:pointer;">
-            <span id="icon-section4">▶</span> Reportes por Unidad
-        </h2>
-        <div id="section4" class="section-content" style="display:none;">
-            <div class="control-group" style="margin-bottom: 20px;">
-                <label>Filtrar por grupo:</label>
-                <select id="unitGroupSelector" onchange="updateUnitTable()">
-                    <option value="all">Todas las unidades</option>
-                    <option value="Hospitalizados">Hospitalizados</option>
-                </select>
-            </div>
-            <div id="unitTableContainer" class="preview">
-            </div>
-        </div>
-    </div>
-`;
-                    
-                    // MODIFIED: Store unitData globally for filtering
-                    window.currentUnitData = unitData;
-                    window.currentSortedPeriods = sortedPeriods;
-                }
-            }
-                        
-           return html;
-        }
-        
-        // ADD THIS NEW FUNCTION:
-        function updateUnitTable() {
-            const selectedGroup = document.getElementById('unitGroupSelector').value;
-            const unitData = window.currentUnitData;
-            const sortedPeriods = window.currentSortedPeriods;
-            
-            if (!unitData || !sortedPeriods) return;
-            
-            // Determine which units to display
-            let unitsToDisplay;
-            if (selectedGroup === 'all') {
-                unitsToDisplay = DEFAULT_UNITS.filter(unit => unitData[unit]);
-            } else if (UNIT_GROUPS[selectedGroup]) {
-                unitsToDisplay = UNIT_GROUPS[selectedGroup].filter(unit => unitData[unit]);
-            } else {
-                unitsToDisplay = DEFAULT_UNITS.filter(unit => unitData[unit]);
-            }
-            
-            // Generate table HTML
-            let tableHtml = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Periodo</th>
-                            ${unitsToDisplay.map(u => `<th>${u}</th>`).join('')}
-                            <th>TOTAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            sortedPeriods.forEach(period => {
-                tableHtml += `<tr><td><strong>${period}</strong></td>`;
-                let periodTotal = 0;
-                unitsToDisplay.forEach(unit => {
-                    const count = unitData[unit][period] || 0;
-                    tableHtml += `<td>${count}</td>`;
-                    periodTotal += count;
-                });
-                tableHtml += `<td><strong>${periodTotal}</strong></td></tr>`;
-            });
-            
-            // Totals row
-            tableHtml += `<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>`;
-            unitsToDisplay.forEach(unit => {
-                let unitTotal = 0;
-                sortedPeriods.forEach(period => {
-                    unitTotal += unitData[unit][period] || 0;
-                });
-                tableHtml += `<td>${unitTotal}</td>`;
-            });
-            
-            // Grand total
-            let grandTotal = 0;
-            unitsToDisplay.forEach(unit => {
-                sortedPeriods.forEach(period => {
-                    grandTotal += unitData[unit][period] || 0;
-                });
-            });
-            tableHtml += `<td>${grandTotal}</td></tr>`;
-            
-            tableHtml += `
-                    </tbody>
-                </table>
-            `;
-            
-            document.getElementById('unitTableContainer').innerHTML = tableHtml;
         }
         
         function toggleSection(sectionId) {
@@ -1627,189 +1235,57 @@ html += `
                 icon.textContent = '▶';
             }
         }
-        function updateServiceEventTable() {
-            const selectedService = document.getElementById('serviceSelector').value;
-            const { sortedPeriods, serviceEventData } = analysisResults;
-            
-            // Obtener todos los eventos para este servicio
-            const allEvents = new Set();
-            Object.values(serviceEventData[selectedService] || {}).forEach(periodData => {
-                Object.keys(periodData).forEach(event => allEvents.add(event));
-            });
-            const sortedEvents = Array.from(allEvents).sort();
-            
-            let tableHtml = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Periodo</th>
-                            ${sortedEvents.map(event => `<th>${event}</th>`).join('')}
-                            <th>TOTAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            sortedPeriods.forEach(period => {
-                tableHtml += `<tr><td><strong>${period}</strong></td>`;
-                let total = 0;
-                sortedEvents.forEach(event => {
-                    const count = (serviceEventData[selectedService] && 
-                                   serviceEventData[selectedService][period] && 
-                                   serviceEventData[selectedService][period][event]) || 0;
-                    tableHtml += `<td>${count}</td>`;
-                    total += count;
-                });
-                tableHtml += `<td><strong>${total}</strong></td></tr>`;
-            });
-            
-            // Fila de totales
-            tableHtml += `<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>`;
-            sortedEvents.forEach(event => {
-                let eventTotal = 0;
-                sortedPeriods.forEach(period => {
-                    eventTotal += (serviceEventData[selectedService] && 
-                                   serviceEventData[selectedService][period] && 
-                                   serviceEventData[selectedService][period][event]) || 0;
-                });
-                tableHtml += `<td>${eventTotal}</td>`;
-            });
-            
-            let grandTotal = 0;
-            sortedPeriods.forEach(period => {
-                sortedEvents.forEach(event => {
-                    grandTotal += (serviceEventData[selectedService] && 
-                                   serviceEventData[selectedService][period] && 
-                                   serviceEventData[selectedService][period][event]) || 0;
-                });
-            });
-            tableHtml += `<td>${grandTotal}</td></tr>`;
-            
-            tableHtml += `
-                    </tbody>
-                </table>
-            `;
-            
-            document.getElementById('serviceEventTableContainer').innerHTML = tableHtml;
-        }
-        function updateServiceClassificationTable() {
-            const selectedService = document.getElementById('serviceClassificationSelector').value;
-            const { sortedPeriods, classifications, serviceClassificationData } = analysisResults;
-            
-            let tableHtml = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Periodo</th>
-                            ${classifications.map(c => `<th>${c}</th>`).join('')}
-                            <th>TOTAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            sortedPeriods.forEach(period => {
-                const serviceData = serviceClassificationData[period] && serviceClassificationData[period][selectedService];
-                if (serviceData) {
-                    tableHtml += `<tr><td><strong>${period}</strong></td>`;
-                    classifications.forEach(c => {
-                        tableHtml += `<td>${serviceData[c]}</td>`;
-                    });
-                    tableHtml += `<td><strong>${serviceData['TOTAL']}</strong></td></tr>`;
-                } else {
-                    tableHtml += `<tr><td><strong>${period}</strong></td>`;
-                    classifications.forEach(c => {
-                        tableHtml += `<td>0</td>`;
-                    });
-                    tableHtml += `<td><strong>0</strong></td></tr>`;
-                }
-            });
-            
-            // Fila de totales
-            tableHtml += `<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>`;
-            classifications.forEach(c => {
-                let total = 0;
-                sortedPeriods.forEach(period => {
-                    const serviceData = serviceClassificationData[period] && serviceClassificationData[period][selectedService];
-                    if (serviceData) {
-                        total += serviceData[c];
-                    }
-                });
-                tableHtml += `<td>${total}</td>`;
-            });
-            
-            let grandTotal = 0;
-            sortedPeriods.forEach(period => {
-                const serviceData = serviceClassificationData[period] && serviceClassificationData[period][selectedService];
-                if (serviceData) {
-                    grandTotal += serviceData['TOTAL'];
-                }
-            });
-            tableHtml += `<td>${grandTotal}</td></tr>`;
-            
-            tableHtml += `
-                    </tbody>
-                </table>
-            `;
-            
-            document.getElementById('serviceClassificationTableContainer').innerHTML = tableHtml;
-        }
+
         function downloadExcel() {
             try {
                 showLoading('Generando archivo Excel...');
 
                 const { periodData, sortedPeriods, classifications, orientation } = analysisResults;
             
-            const wb = XLSX.utils.book_new();
-            let wsData = [];
+                const wb = XLSX.utils.book_new();
+                let wsData = [];
             
-            if (orientation === 'rows') {
-                // Header
-                wsData.push(['Periodo', ...classifications, 'TOTAL']);
-                
-                // Data rows
-                sortedPeriods.forEach(period => {
-                    const row = [period];
-                    classifications.forEach(c => row.push(periodData[period][c]));
-                    row.push(periodData[period]['TOTAL']);
-                    wsData.push(row);
-                });
-                
-                // Totals row
-                const totalRow = ['TOTAL'];
-                classifications.forEach(c => {
-                    const total = sortedPeriods.reduce((sum, p) => sum + periodData[p][c], 0);
-                    totalRow.push(total);
-                });
-                const grandTotal = sortedPeriods.reduce((sum, p) => sum + periodData[p]['TOTAL'], 0);
-                totalRow.push(grandTotal);
-                wsData.push(totalRow);
-                
-            } else {
-                // Header
-                wsData.push(['Clasificación', ...sortedPeriods, 'TOTAL']);
-                
-                // Data rows
-                classifications.forEach(c => {
-                    const row = [c];
-                    sortedPeriods.forEach(period => row.push(periodData[period][c]));
-                    const total = sortedPeriods.reduce((sum, p) => sum + periodData[p][c], 0);
-                    row.push(total);
-                    wsData.push(row);
-                });
-                
-                // Totals row
-                const totalRow = ['TOTAL'];
-                sortedPeriods.forEach(period => totalRow.push(periodData[period]['TOTAL']));
-                const grandTotal = sortedPeriods.reduce((sum, p) => sum + periodData[p]['TOTAL'], 0);
-                totalRow.push(grandTotal);
-                wsData.push(totalRow);
-            }
+                if (orientation === 'rows') {
+                    wsData.push(['Periodo', ...classifications, 'TOTAL']);
+                    
+                    sortedPeriods.forEach(period => {
+                        const row = [period];
+                        classifications.forEach(c => row.push(periodData[period][c]));
+                        row.push(periodData[period]['TOTAL']);
+                        wsData.push(row);
+                    });
+                    
+                    const totalRow = ['TOTAL'];
+                    classifications.forEach(c => {
+                        const total = sortedPeriods.reduce((sum, p) => sum + periodData[p][c], 0);
+                        totalRow.push(total);
+                    });
+                    const grandTotal = sortedPeriods.reduce((sum, p) => sum + periodData[p]['TOTAL'], 0);
+                    totalRow.push(grandTotal);
+                    wsData.push(totalRow);
+                    
+                } else {
+                    wsData.push(['Clasificación', ...sortedPeriods, 'TOTAL']);
+                    
+                    classifications.forEach(c => {
+                        const row = [c];
+                        sortedPeriods.forEach(period => row.push(periodData[period][c]));
+                        const total = sortedPeriods.reduce((sum, p) => sum + periodData[p][c], 0);
+                        row.push(total);
+                        wsData.push(row);
+                    });
+                    
+                    const totalRow = ['TOTAL'];
+                    sortedPeriods.forEach(period => totalRow.push(periodData[period]['TOTAL']));
+                    const grandTotal = sortedPeriods.reduce((sum, p) => sum + periodData[p]['TOTAL'], 0);
+                    totalRow.push(grandTotal);
+                    wsData.push(totalRow);
+                }
             
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
-            XLSX.utils.book_append_sheet(wb, ws, 'Resumen por Periodo');
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                XLSX.utils.book_append_sheet(wb, ws, 'Resumen por Periodo');
             
-           XLSX.writeFile(wb, 'Analisis_Incidentes.xlsx');
+                XLSX.writeFile(wb, 'Analisis_Incidentes.xlsx');
                 hideLoading();
 
             } catch (error) {
@@ -1827,14 +1303,10 @@ html += `
             event.stopPropagation();
             
             try {
-                // Obtener todas las celdas de esa columna
                 const cells = document.querySelectorAll(`td[data-col="${columnName}"]`);
-                
-                // Extraer los valores, excluyendo el último (que es el total)
                 const values = Array.from(cells).slice(0, -1).map(cell => cell.textContent.trim());
-                
-                // Copiar al portapapeles
                 const text = values.join('\n');
+                
                 navigator.clipboard.writeText(text).then(() => {
                     showCopiedNotification(`Columna "${columnName}" copiada`);
                 }).catch(err => {
@@ -1844,23 +1316,21 @@ html += `
                 alert('Error al copiar columna: ' + error.message);
             }
         }
+
         function copyRow(event, rowName) {
             event.stopPropagation();
             
             try {
-                // Obtener la fila completa
                 const row = document.querySelector(`tr[data-row="${rowName}"]`);
                 if (!row) {
                     alert('No se encontró la fila');
                     return;
                 }
                 
-                // Obtener todas las celdas de datos (excluyendo la primera que es el nombre y la última que es el total)
                 const cells = row.querySelectorAll('td');
                 const values = Array.from(cells).slice(1, -1).map(cell => cell.textContent.trim());
-                
-                // Copiar al portapapeles (valores separados por tabulación para pegar en Excel)
                 const text = values.join('\t');
+                
                 navigator.clipboard.writeText(text).then(() => {
                     showCopiedNotification(`Fila "${rowName}" copiada`);
                 }).catch(err => {
@@ -1870,7 +1340,8 @@ html += `
                 alert('Error al copiar fila: ' + error.message);
             }
         }
-function showCopiedNotification(message) {
+
+        function showCopiedNotification(message) {
             const notification = document.createElement('div');
             notification.className = 'copied-notification';
             notification.textContent = `✓ ${message}`;
