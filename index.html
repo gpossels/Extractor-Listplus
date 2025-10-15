@@ -740,9 +740,7 @@ function performFuzzyMatching() {
         console.log('Name mapping created, total names:', Object.keys(nameToUnit).length);
         console.log('Starting reporter matching...');
         
-        const reporterToUnit = {};
-        let processed = 0;
-        
+            
         // Get unique reporters first to avoid duplicate work
         const uniqueReporters = [...new Set(cleanedData.rows.map(row => String(row[reporterIdx] || '').trim()).filter(r => r))];
         console.log('Unique reporters to match:', uniqueReporters.length);
