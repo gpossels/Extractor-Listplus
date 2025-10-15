@@ -1205,8 +1205,8 @@ function parseDate(dateStr) {
             // Generar tabla principal colapsable
             let tableHtml = `
                 <div class="step collapsible-section">
-                    <h2 onclick="toggleSection('mainTable')" style="cursor:pointer;">
-                        <span id="icon-mainTable">▶</span> Tipo de Incidente por Periodo
+                    <h2 onclick="toggleSection('section2')" style="cursor:pointer;">
+                        <span id="icon-section2">▶</span> Eventos por Servicio
                     </h2>
                     <div id="mainTable" class="section-content" style="display:none;">
                         <div class="preview">
@@ -1496,13 +1496,46 @@ html += `<td>${grandTotal}</td></tr>`;
         function updateServiceEventTable() {
             const selectedService = document.getElementById('serviceSelector').value;
             const { sortedPeriods, serviceEventData } = analysisResults;
-            
+			// Define Hospitalización services
+		    const hospitalizacionServices = [
+		        'PABELLÓN CENTRAL',
+		        'UNIDAD CORONARIA',
+		        'HOSP. GINECO OBSTÉTRICA',
+		        'ONCOLOGÍA ADULTO',
+		        'NEONATOLOGÍA',
+		        'PABELLÓN GINECO OBSTÉTRICO',
+		        'INTENSIVO ADULTO',
+		        'INTERMEDIO ADULTO',
+		        'HOSP. MÉDICO QUIRÚRGICO 1',
+		        'HOSP. PEDIÁTRICA',
+		        'INTERMEDIO PEDIÁTRICO',
+		        'RECUPERACIÓN INTENSIVO',
+		        'PEDIÁTRICO',
+		        'PABELLÓN HEMODINAMIA',
+		        'HOSP. MÉDICO QUIRÚRGICO 2'
+		    ];
+		    
+		    const isHospitalizacion = hospitalizacionServices.includes(selectedService);
+    		const isHospitalizacionGroup = selectedService === 'HOSPITALIZACIÓN';
+
+			
             // Obtener todos los eventos para este servicio
-            const allEvents = new Set();
-            Object.values(serviceEventData[selectedService] || {}).forEach(periodData => {
+    const allEvents = new Set();
+    
+    if (isHospitalizacionGroup) {
+        // Get events from all hospitalization services
+        hospitalizacionServices.forEach(hospService => {
+            Object.values(serviceEventData[hospService] || {}).forEach(periodData => {
                 Object.keys(periodData).forEach(event => allEvents.add(event));
             });
-            const sortedEvents = Array.from(allEvents).sort();
+        });
+    } else {
+        Object.values(serviceEventData[selectedService] || {}).forEach(periodData => {
+            Object.keys(periodData).forEach(event => allEvents.add(event));
+        });
+    }
+    
+    const sortedEvents = Array.from(allEvents).sort();
             
             let tableHtml = `
                 <table>
@@ -1517,39 +1550,111 @@ html += `<td>${grandTotal}</td></tr>`;
             `;
             
             sortedPeriods.forEach(period => {
-                tableHtml += `<tr><td><strong>${period}</strong></td>`;
-                let total = 0;
+        tableHtml += `<tr><td><strong>${period}</strong></td>`;
+        let total = 0;
+        sortedEvents.forEach(event => {
+            let count = 0;
+            
+            if (isHospitalizacionGroup) {
+                // Sum across all hospitalization services
+                hospitalizacionServices.forEach(hospService => {
+                    count += (serviceEventData[hospService] && 
+                             serviceEventData[hospService][period] && 
+                             serviceEventData[hospService][period][event]) || 0;
+                });
+            } else {
+                count = (serviceEventData[selectedService] && 
+                        serviceEventData[selectedService][period] && 
+                        serviceEventData[selectedService][period][event]) || 0;
+            }
+            
+            tableHtml += `<td>${count}</td>`;
+            total += count;
+        });
+        tableHtml += `<td><strong>${total}</strong></td></tr>`;
+    });
+
+			// Add Hospitalización summary row if this is a hospitalization service
+            if (isHospitalizacion) {
+                tableHtml += `<tr style="background:#e3f2fd;"><td><strong>📊 Total Hospitalización</strong></td>`;
+                
                 sortedEvents.forEach(event => {
-                    const count = (serviceEventData[selectedService] && 
-                                   serviceEventData[selectedService][period] && 
-                                   serviceEventData[selectedService][period][event]) || 0;
-                    tableHtml += `<td>${count}</td>`;
-                    total += count;
+                    let hospTotal = 0;
+                    
+                    // Sum across all hospitalization services for this event
+                    hospitalizacionServices.forEach(hospService => {
+                        sortedPeriods.forEach(period => {
+                            hospTotal += (serviceEventData[hospService] && 
+                                         serviceEventData[hospService][period] && 
+                                         serviceEventData[hospService][period][event]) || 0;
+                        });
+                    });
+                    
+                    tableHtml += `<td><strong>${hospTotal}</strong></td>`;
                 });
-                tableHtml += `<td><strong>${total}</strong></td></tr>`;
-            });
-            
+                
+                // Grand total for all hospitalization services
+                let hospGrandTotal = 0;
+                hospitalizacionServices.forEach(hospService => {
+                    sortedPeriods.forEach(period => {
+                        sortedEvents.forEach(event => {
+                            hospGrandTotal += (serviceEventData[hospService] && 
+                                             serviceEventData[hospService][period] && 
+                                             serviceEventData[hospService][period][event]) || 0;
+                        });
+                    });
+                });
+                
+                tableHtml += `<td><strong>${hospGrandTotal}</strong></td></tr>`;
+            }
+			
             // Fila de totales
-            tableHtml += `<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>`;
-            sortedEvents.forEach(event => {
-                let eventTotal = 0;
+    tableHtml += `<tr style="background:#f0f0f0;font-weight:bold;"><td>TOTAL</td>`;
+    sortedEvents.forEach(event => {
+        let eventTotal = 0;
+        
+        if (isHospitalizacionGroup) {
+            hospitalizacionServices.forEach(hospService => {
                 sortedPeriods.forEach(period => {
-                    eventTotal += (serviceEventData[selectedService] && 
-                                   serviceEventData[selectedService][period] && 
-                                   serviceEventData[selectedService][period][event]) || 0;
+                    eventTotal += (serviceEventData[hospService] && 
+                                  serviceEventData[hospService][period] && 
+                                  serviceEventData[hospService][period][event]) || 0;
                 });
-                tableHtml += `<td>${eventTotal}</td>`;
             });
-            
-            let grandTotal = 0;
+        } else {
+            sortedPeriods.forEach(period => {
+                eventTotal += (serviceEventData[selectedService] && 
+                              serviceEventData[selectedService][period] && 
+                              serviceEventData[selectedService][period][event]) || 0;
+            });
+        }
+        
+        tableHtml += `<td>${eventTotal}</td>`;
+    });
+    
+    let grandTotal = 0;
+    
+    if (isHospitalizacionGroup) {
+        hospitalizacionServices.forEach(hospService => {
             sortedPeriods.forEach(period => {
                 sortedEvents.forEach(event => {
-                    grandTotal += (serviceEventData[selectedService] && 
-                                   serviceEventData[selectedService][period] && 
-                                   serviceEventData[selectedService][period][event]) || 0;
+                    grandTotal += (serviceEventData[hospService] && 
+                                  serviceEventData[hospService][period] && 
+                                  serviceEventData[hospService][period][event]) || 0;
                 });
             });
-            tableHtml += `<td>${grandTotal}</td></tr>`;
+        });
+    } else {
+        sortedPeriods.forEach(period => {
+            sortedEvents.forEach(event => {
+                grandTotal += (serviceEventData[selectedService] && 
+                              serviceEventData[selectedService][period] && 
+                              serviceEventData[selectedService][period][event]) || 0;
+            });
+        });
+    }
+    
+    tableHtml += `<td>${grandTotal}</td></tr>`;
             
             tableHtml += `
                     </tbody>
