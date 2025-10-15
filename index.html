@@ -743,52 +743,83 @@ function performFuzzyMatching() {
         const reporterToUnit = {};
         let processed = 0;
         
-        cleanedData.rows.forEach((row, index) => {
-            const reporter = String(row[reporterIdx] || '').trim();
-            if (!reporter) return;
-
-            const reporterLower = reporter.toLowerCase();
+        // Get unique reporters first to avoid duplicate work
+        const uniqueReporters = [...new Set(cleanedData.rows.map(row => String(row[reporterIdx] || '').trim()).filter(r => r))];
+        console.log('Unique reporters to match:', uniqueReporters.length);
+        
+        const reporterToUnit = {};
+        const namesArray = Object.keys(nameToUnit);
+        let processed = 0;
+        
+        // Process in batches to avoid UI freeze
+        function processBatch(startIdx) {
+            const batchSize = 50;
+            const endIdx = Math.min(startIdx + batchSize, uniqueReporters.length);
             
-            // Buscar coincidencia exacta primero
-            if (nameToUnit[reporterLower]) {
-                reporterToUnit[reporter] = {
-                    unit: nameToUnit[reporterLower],
-                    matchedName: reporter,
-                    score: 1.0
-                };
-            } else {
-                // Buscar coincidencia parcial
-                let bestMatch = null;
-                let bestScore = 0;
+            for (let i = startIdx; i < endIdx; i++) {
+                const reporter = uniqueReporters[i];
+                const reporterLower = reporter.toLowerCase();
                 
-                for (let name in nameToUnit) {
-                    const similarity = calculateSimilarity(reporterLower, name);
-                    if (similarity > bestScore && similarity > 0.6) {
-                        bestScore = similarity;
-                        bestMatch = name;
+                // Buscar coincidencia exacta primero
+                if (nameToUnit[reporterLower]) {
+                    reporterToUnit[reporter] = {
+                        unit: nameToUnit[reporterLower],
+                        matchedName: reporter,
+                        score: 1.0
+                    };
+                } else {
+                    // Buscar coincidencia parcial
+                    let bestMatch = null;
+                    let bestScore = 0;
+                    
+                    for (let j = 0; j < namesArray.length; j++) {
+                        const name = namesArray[j];
+                        const similarity = calculateSimilarity(reporterLower, name);
+                        if (similarity > bestScore && similarity > 0.6) {
+                            bestScore = similarity;
+                            bestMatch = name;
+                        }
+                    }
+                    
+                    if (bestMatch) {
+                        reporterToUnit[reporter] = {
+                            unit: nameToUnit[bestMatch],
+                            matchedName: bestMatch,
+                            score: bestScore
+                        };
+                    } else {
+                        reporterToUnit[reporter] = {
+                            unit: 'Sin match',
+                            matchedName: '-',
+                            score: 0
+                        };
                     }
                 }
                 
-                if (bestMatch) {
-                    reporterToUnit[reporter] = {
-                        unit: nameToUnit[bestMatch],
-                        matchedName: bestMatch,
-                        score: bestScore
-                    };
-                } else {
-                    reporterToUnit[reporter] = {
-                        unit: 'Sin match',
-                        matchedName: '-',
-                        score: 0
-                    };
-                }
+                processed++;
             }
             
-            processed++;
-            if (processed % 100 === 0) {
-                console.log('Processed', processed, 'of', cleanedData.rows.length, 'reporters');
+            console.log('Processed', processed, 'of', uniqueReporters.length, 'reporters');
+            
+// Update loading message with progress
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay) {
+                const percent = Math.round((processed / uniqueReporters.length) * 100);
+                loadingOverlay.querySelector('.loading-content div:last-child').textContent = 
+                    `Realizando fuzzy matching... ${percent}% (${processed}/${uniqueReporters.length})`;
             }
-        });
+
+
+            if (endIdx < uniqueReporters.length) {
+                // Continue with next batch
+                setTimeout(() => processBatch(endIdx), 0);
+            } else {
+                // Finished!
+                finishMatching();
+            }
+        }
+        
+        function finishMatching() {
 
         console.log('Matching complete!');
 
@@ -805,6 +836,10 @@ function performFuzzyMatching() {
 
         console.log('All done!');
         hideLoading();
+	}
+        
+        // Start the batch processing
+        processBatch(0);
 
     } catch (error) {
         console.error('Error in fuzzy matching:', error);
@@ -820,29 +855,44 @@ function calculateSimilarity(str1, str2) {
     
     if (longer.length === 0) return 1.0;
     
-    // Check if one contains the other
-    if (longer.includes(shorter)) return 0.8;
+    // Quick checks first (fastest)
+    if (str1 === str2) return 1.0;
+    if (longer.includes(shorter)) return 0.85;
     
-    // Levenshtein distance
-    const costs = [];
-    for (let i = 0; i <= longer.length; i++) {
-        let lastValue = i;
-        for (let j = 0; j <= shorter.length; j++) {
-            if (i === 0) {
-                costs[j] = j;
-            } else if (j > 0) {
-                let newValue = costs[j - 1];
-                if (longer.charAt(i - 1) !== shorter.charAt(j - 1)) {
-                    newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-                }
-                costs[j - 1] = lastValue;
-                lastValue = newValue;
-            }
-        }
-        if (i > 0) costs[shorter.length] = lastValue;
+    // Check if length difference is too large (early exit)
+    const lengthDiff = longer.length - shorter.length;
+    if (lengthDiff > shorter.length * 0.5) return 0;
+    
+    // Optimized Levenshtein with early exit
+    const maxDistance = Math.floor(longer.length * 0.4); // Stop if distance > 40%
+    let prevRow = new Array(shorter.length + 1);
+    
+    for (let j = 0; j <= shorter.length; j++) {
+        prevRow[j] = j;
     }
     
-    return 1 - (costs[shorter.length] / longer.length);
+    for (let i = 1; i <= longer.length; i++) {
+        let currentRow = [i];
+        let minInRow = i;
+        
+        for (let j = 1; j <= shorter.length; j++) {
+            const cost = longer[i - 1] === shorter[j - 1] ? 0 : 1;
+            const value = Math.min(
+                prevRow[j] + 1,      // deletion
+                currentRow[j - 1] + 1, // insertion
+                prevRow[j - 1] + cost  // substitution
+            );
+            currentRow.push(value);
+            minInRow = Math.min(minInRow, value);
+        }
+        
+        // Early exit if this row is too far
+        if (minInRow > maxDistance) return 0;
+        
+        prevRow = currentRow;
+    }
+    
+    return 1 - (prevRow[shorter.length] / longer.length);
 }       
 function parseDate(dateStr) {
     if (!dateStr) return null;
