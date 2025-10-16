@@ -490,6 +490,10 @@
             <div style="margin-top:25px;">
                 <h3 style="font-size:16px; margin-bottom:10px;">Grupos de Servicios:</h3>
                 <div style="background:#f8f9fa; padding:15px; border-radius:8px;">
+                    <div style="margin-bottom:10px;">
+                        <button onclick="selectAllGroups(true)" style="margin-right:10px;">Seleccionar todos</button>
+                        <button onclick="selectAllGroups(false)">Deseleccionar todos</button>
+                    </div>
                     <div id="serviceGroups"></div>
                     <button onclick="createNewServiceGroup()" style="margin-top:10px; background:#667eea;">+ Crear Nuevo Grupo</button>
                 </div>
@@ -965,53 +969,73 @@
         function selectAllUnits(select) {
             document.querySelectorAll('.unit-filter').forEach(cb => cb.checked = select);
         }
+
+        function selectAllGroups(select) {
+            document.querySelectorAll('.group-checkbox').forEach(cb => cb.checked = select);
+        }
         
         function renderServiceGroups() {
-            const container = document.getElementById('serviceGroups');
-            container.innerHTML = '';
+    const container = document.getElementById('serviceGroups');
+    container.innerHTML = '';
+    
+    selectedGroups.forEach(group => {
+        const groupDiv = document.createElement('div');
+        groupDiv.style.cssText = 'margin-bottom:15px; padding:10px; background:white; border-radius:5px; border:1px solid #ddd;';
+        
+        const header = document.createElement('div');
+        header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;';
+        
+        // LEFT SIDE: Checkbox + Title
+        const leftSide = document.createElement('div');
+        leftSide.style.cssText = 'display:flex; align-items:center; gap:10px;';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'group-checkbox';
+        checkbox.value = group.id;
+        checkbox.checked = true; // Selected by default
+        checkbox.id = 'group_' + group.id;
+        
+        const title = document.createElement('label');
+        title.htmlFor = 'group_' + group.id;
+        title.style.cssText = 'font-weight:bold; color:#667eea; cursor:pointer;';
+        title.textContent = group.name;
+        
+        leftSide.appendChild(checkbox);
+        leftSide.appendChild(title);
+        
+        // RIGHT SIDE: Edit/Delete buttons
+        const buttons = document.createElement('div');
+        buttons.style.cssText = 'display:flex; gap:5px;';
+        
+        if (!group.predefined) {
+            const editBtn = document.createElement('button');
+            editBtn.textContent = 'Editar';
+            editBtn.style.cssText = 'padding:3px 8px; font-size:11px; background:#ffc107;';
+            editBtn.onclick = () => editServiceGroup(group.id);
             
-            serviceGroups.forEach(group => {
-                const groupDiv = document.createElement('div');
-                groupDiv.style.cssText = 'margin-bottom:15px; padding:10px; background:white; border-radius:5px; border:1px solid #ddd;';
-                
-                const header = document.createElement('div');
-                header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;';
-                
-                const title = document.createElement('strong');
-                title.textContent = group.name;
-                title.style.color = '#667eea';
-                
-                const buttons = document.createElement('div');
-                buttons.style.cssText = 'display:flex; gap:5px;';
-                
-                if (!group.predefined) {
-                    const editBtn = document.createElement('button');
-                    editBtn.textContent = 'Editar';
-                    editBtn.style.cssText = 'padding:3px 8px; font-size:11px; background:#ffc107;';
-                    editBtn.onclick = () => editServiceGroup(group.id);
-                    
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.textContent = 'Eliminar';
-                    deleteBtn.style.cssText = 'padding:3px 8px; font-size:11px; background:#dc3545;';
-                    deleteBtn.onclick = () => deleteServiceGroup(group.id);
-                    
-                    buttons.appendChild(editBtn);
-                    buttons.appendChild(deleteBtn);
-                }
-                
-                header.appendChild(title);
-                header.appendChild(buttons);
-                
-                const servicesList = document.createElement('div');
-                servicesList.style.cssText = 'font-size:12px; color:#666; line-height:1.6;';
-                servicesList.textContent = '• ' + group.services.join('\n• ');
-                servicesList.style.whiteSpace = 'pre-line';
-                
-                groupDiv.appendChild(header);
-                groupDiv.appendChild(servicesList);
-                container.appendChild(groupDiv);
-            });
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Eliminar';
+            deleteBtn.style.cssText = 'padding:3px 8px; font-size:11px; background:#dc3545;';
+            deleteBtn.onclick = () => deleteServiceGroup(group.id);
+            
+            buttons.appendChild(editBtn);
+            buttons.appendChild(deleteBtn);
         }
+        
+        header.appendChild(leftSide);
+        header.appendChild(buttons);
+        
+        const servicesList = document.createElement('div');
+        servicesList.style.cssText = 'font-size:12px; color:#666; line-height:1.6; margin-left:30px;';
+        servicesList.textContent = '• ' + group.services.join('\n• ');
+        servicesList.style.whiteSpace = 'pre-line';
+        
+        groupDiv.appendChild(header);
+        groupDiv.appendChild(servicesList);
+        container.appendChild(groupDiv);
+    });
+}
         
         function createNewServiceGroup() {
             const name = prompt('Nombre del nuevo grupo:');
@@ -1214,9 +1238,13 @@
             const periodData = {};
             const serviceGroupData = {};
             
+            // Get selected groups
+            const selectedGroupIds = Array.from(document.querySelectorAll('.group-checkbox:checked')).map(cb => cb.value);
+            const selectedGroups = serviceGroups.filter(g => selectedGroupIds.includes(g.id));
+            
             selectedPeriods.forEach(period => {
                 periodData[period] = {};
-                serviceGroups.forEach(group => {
+                selectedGroups.forEach(group => {
                     serviceGroupData[period] = serviceGroupData[period] || {};
                     serviceGroupData[period][group.name] = {};
                 });
@@ -1264,14 +1292,13 @@
                 }
                 periodData[period][categoryValue]++;
                 
-                serviceGroups.forEach(group => {
-                    if (group.services.includes(service)) {
-                        if (!serviceGroupData[period][group.name][categoryValue]) {
-                            serviceGroupData[period][group.name][categoryValue] = 0;
-                        }
-                        serviceGroupData[period][group.name][categoryValue]++;
+                selectedGroups.forEach(group => {
+                if (group.services.includes(service)) {
+                if (!serviceGroupData[period][group.name][categoryValue]) {
+                        serviceGroupData[period][group.name][categoryValue] = 0;
                     }
-                });
+                    serviceGroupData[period][group.name][categoryValue]++;
+                }
             });
             
             const sortedCategories = Array.from(categoryValues).sort();
@@ -1285,16 +1312,17 @@
             });
             
             return {
-                config,
-                periodData,
-                serviceGroupData,
-                sortedCategories,
-                selectedPeriods
-            };
+    config,
+    periodData,
+    serviceGroupData,
+    sortedCategories,
+    selectedPeriods,
+    selectedGroups
+};
         }
         
         function displayCrossAnalysisResults(crossData) {
-            const { periodData, serviceGroupData, sortedCategories, selectedPeriods, config } = crossData;
+           const { periodData, serviceGroupData, sortedCategories, selectedPeriods, selectedGroups, config } = crossData;
             
             const categoryNames = {
                 'classification': 'Clasificación',
@@ -1335,7 +1363,7 @@
                 });
                 tableHtml += `<td data-cross-col="TOTAL"><strong>${rowTotal}</strong></td></tr>`;
                 
-                serviceGroups.forEach(group => {
+                selectedGroups.forEach(group => {
                     let groupTotal = 0;
                     sortedCategories.forEach(cat => {
                         groupTotal += serviceGroupData[period][group.name][cat] || 0;
@@ -1802,7 +1830,7 @@ function downloadExcel() {
                 
                 if (analysisResults.type === 'cross') {
                     const { crossData } = analysisResults;
-                    const { periodData, serviceGroupData, sortedCategories, selectedPeriods, config } = crossData;
+                    const { periodData, serviceGroupData, sortedCategories, selectedPeriods, selectedGroups, config } = crossData;
                     
                     let wsData = [['Período', ...sortedCategories, 'TOTAL']];
                     
@@ -1817,7 +1845,7 @@ function downloadExcel() {
                         row.push(rowTotal);
                         wsData.push(row);
                         
-                        serviceGroups.forEach(group => {
+                        selectedGroups.forEach(group => {
                             let groupTotal = 0;
                             const groupRow = [`  ${group.name}`];
                             sortedCategories.forEach(cat => {
