@@ -822,7 +822,7 @@ function buildServiceBoxes() {
                 const serviceBtn = document.createElement('button');
                 serviceBtn.textContent = service;
                 serviceBtn.className = 'service-item';
-                serviceBtn.style.cssText = 'padding:8px; text-align:left; background:white; border:1px solid #ddd; border-radius:5px; cursor:pointer; transition:all 0.2s;';
+                serviceBtn.style.cssText = 'padding:8px; text-align:left; background:white; border:1px solid #ddd; border-radius:5px; cursor:pointer; transition:all 0.2s; color:#333;';
                 serviceBtn.onmouseover = function() { this.style.background = '#e7f3ff'; };
                 serviceBtn.onmouseout = function() { this.style.background = 'white'; };
                 serviceBtn.onclick = function() { moveService(service, 'toOut'); };
