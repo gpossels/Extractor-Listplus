@@ -517,7 +517,7 @@
             </div>
             
             <button onclick="generateCrossAnalysis()" style="width:100%; margin-top:15px; background:linear-gradient(135deg, #28a745 0%, #20c997 100%);">🔍 Generar Análisis</button>
-
+            </div>
         <div id="resultsStep" style="display:none;">
             <div class="step">
                 <h2>Resultados del Análisis</h2>
@@ -1379,7 +1379,7 @@ function buildServiceBoxes() {
                     dateType,
                     selectedPeriods,
                     selectedServices,
-                    selectedUnits,
+                    selectedUnits: [],
                     additionalFilters
                 });
                 
@@ -1423,10 +1423,6 @@ if (selectedGroups.length > 0) {
 
 selectedPeriods.forEach(period => {
     periodData[period] = {};
-    serviceGroupData[period] = {};
-    selectedGroups.forEach(group => {
-        serviceGroupData[period][group.name] = {};
-    });
 });
             
             cleanedData.rows.forEach(row => {
@@ -1471,14 +1467,7 @@ if (!effectiveServices.includes(service)) return;
                 }
                 periodData[period][categoryValue]++;
                 
-                selectedGroups.forEach(group => {
-    if (group.services.includes(service)) {
-        if (!serviceGroupData[period][group.name][categoryValue]) {
-            serviceGroupData[period][group.name][categoryValue] = 0;
-        }
-        serviceGroupData[period][group.name][categoryValue]++;
-    }
-});
+                
 });
 const sortedCategories = Array.from(categoryValues).sort();
 
@@ -1493,15 +1482,13 @@ selectedPeriods.forEach(period => {
 return {
     config,
     periodData,
-    serviceGroupData,
     sortedCategories,
-    selectedPeriods,
-    selectedGroups
+    selectedPeriods
 };
 }  // ✅ CERRAR performCrossAnalysis AQUÍ
         
         function displayCrossAnalysisResults(crossData) {
-    const { periodData, serviceGroupData, sortedCategories, selectedPeriods, selectedGroups, config } = crossData;
+    const { periodData, sortedCategories, selectedPeriods, config } = crossData;
     
     const categoryNames = {
         'classification': 'Clasificación',
@@ -2038,19 +2025,7 @@ function downloadExcel() {
                         row.push(rowTotal);
                         wsData.push(row);
                         
-                        selectedGroups.forEach(group => {
-                            let groupTotal = 0;
-                            const groupRow = [`  ${group.name}`];
-                            sortedCategories.forEach(cat => {
-                                const val = serviceGroupData[period][group.name][cat] || 0;
-                                groupRow.push(val);
-                                groupTotal += val;
-                            });
-                            if (groupTotal > 0) {
-                                groupRow.push(groupTotal);
-                                wsData.push(groupRow);
-                            }
-                        });
+                        
                     });
                     
                     const totalRow = ['TOTAL'];
