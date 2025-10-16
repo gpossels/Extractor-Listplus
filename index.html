@@ -1263,14 +1263,18 @@
 const selectedGroupIds = Array.from(document.querySelectorAll('.group-checkbox:checked')).map(cb => cb.value);
 const selectedGroups = serviceGroups.filter(g => selectedGroupIds.includes(g.id));
 
-// Si hay grupos seleccionados, usar SOLO los servicios de esos grupos
-let effectiveServices = selectedServices;
+// Determinar qué servicios usar:
+// - Si hay grupos seleccionados: usar SOLO los servicios de esos grupos
+// - Si NO hay grupos seleccionados: usar los servicios seleccionados manualmente
+let effectiveServices = [];
 if (selectedGroups.length > 0) {
     const groupServices = new Set();
     selectedGroups.forEach(group => {
         group.services.forEach(s => groupServices.add(s));
     });
-    effectiveServices = selectedServices.filter(s => groupServices.has(s));
+    effectiveServices = Array.from(groupServices);
+} else {
+    effectiveServices = selectedServices;
 }
 
 selectedPeriods.forEach(period => {
