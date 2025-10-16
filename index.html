@@ -623,6 +623,12 @@
         function handleFile(e) {
             const file = e.target.files[0];
             if (!file) return;
+            
+            const MAX_SIZE = 50 * 1024 * 1024; // 50MB limit
+            if (file.size > MAX_SIZE) {
+                showError('El archivo es demasiado grande. Tamaño máximo: 50MB');
+                return;
+            }
 
             clearError();
             showLoading('Cargando archivo...');
@@ -938,7 +944,8 @@
             uniqueServices.forEach(service => {
                 const label = document.createElement('label');
                 label.style.cssText = 'display:flex; align-items:center; gap:5px; font-size:13px;';
-                label.innerHTML = `<input type="checkbox" class="service-filter" value="${service}" checked> ${service}`;
+                const sanitizedService = service.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                label.innerHTML = `<input type="checkbox" class="service-filter" value="${sanitizedService}" checked> ${sanitizedService}`;
                 container.appendChild(label);
             });
         }
@@ -971,7 +978,8 @@
             uniqueUnits.forEach(unit => {
                 const label = document.createElement('label');
                 label.style.cssText = 'display:flex; align-items:center; gap:5px; font-size:13px;';
-                label.innerHTML = `<input type="checkbox" class="unit-filter" value="${unit}" checked> ${unit}`;
+                const sanitizedUnit = unit.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                label.innerHTML = `<input type="checkbox" class="unit-filter" value="${sanitizedUnit}" checked> ${sanitizedUnit}`;
                 container.appendChild(label);
             });
         }
@@ -1075,6 +1083,17 @@
             const name = prompt('Nombre del nuevo grupo:');
             if (!name) return;
             
+            // Validate and sanitize group name
+            const trimmedName = name.trim();
+            if (trimmedName.length === 0) {
+                alert('El nombre del grupo no puede estar vacío.');
+                return;
+            }
+            if (trimmedName.length > 50) {
+                alert('El nombre del grupo es demasiado largo (máximo 50 caracteres).');
+                return;
+            }
+            
             const selectedServices = [];
             document.querySelectorAll('.service-filter:checked').forEach(cb => {
                 selectedServices.push(cb.value);
@@ -1087,7 +1106,7 @@
             
             serviceGroups.push({
                 id: 'custom_' + Date.now(),
-                name: name,
+                name: trimmedName,
                 services: selectedServices,
                 predefined: false
             });
@@ -1396,7 +1415,8 @@ return {
     
     sortedCategories.forEach(cat => {
         const escapedCat = cat.replace(/'/g, "\\'");
-        tableHtml += `<th>${cat}<button class="copy-btn" onclick="copyCrossColumn(event, '${escapedCat}')">copiar</button></th>`;
+        const sanitizedCat = cat.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        tableHtml += `<th>${sanitizedCat}<button class="copy-btn" onclick="copyCrossColumn(event, '${escapedCat}')">copiar</button></th>`;
     });
     tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyCrossColumn(event, \'TOTAL\')">copiar</button></th></tr></thead><tbody>';
     
@@ -1407,7 +1427,8 @@ return {
         });
         
         const escapedPeriod = String(period).replace(/'/g, "\\'");
-        tableHtml += `<tr data-cross-row="${escapedPeriod}"><td><strong>${period}</strong><button class="row-copy-btn" onclick="copyCrossRow(event, '${escapedPeriod}')">copiar</button></td>`;
+        const sanitizedPeriod = String(period).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        tableHtml += `<tr data-cross-row="${escapedPeriod}"><td><strong>${sanitizedPeriod}</strong><button class="row-copy-btn" onclick="copyCrossRow(event, '${escapedPeriod}')">copiar</button></td>`;
         sortedCategories.forEach(cat => {
             tableHtml += `<td data-cross-col="${cat}">${periodData[period][cat] || 0}</td>`;
         });
@@ -1509,7 +1530,12 @@ return {
 function handleUnitsFile(e) {
             const file = e.target.files[0];
             if (!file) return;
-
+            
+            const MAX_SIZE = 10 * 1024 * 1024; // 10MB limit for units file
+            if (file.size > MAX_SIZE) {
+                showError('El archivo de unidades es demasiado grande. Tamaño máximo: 10MB');
+                return;
+            }
             showLoading('Cargando archivo de unidades...');
 
             const reader = new FileReader();
@@ -1757,6 +1783,8 @@ function performFuzzyMatching() {
 function parseDate(dateStr) {
             if (!dateStr) return null;
             
+            try {
+            
             if (dateStr instanceof Date && !isNaN(dateStr)) {
                 return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate());
             }
@@ -1784,6 +1812,10 @@ function parseDate(dateStr) {
             }
             
             return null;
+            } catch (error) {
+                console.warn('Error parsing date:', dateStr, error);
+                return null;
+            }
         }
 
 function getWeekNumber(date) {
