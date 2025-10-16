@@ -314,15 +314,49 @@
             margin: 0 auto 20px;
         }
         
-        .upload-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+        
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            border-radius: 5px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        input[type="range"]:hover::-webkit-slider-thumb {
+            background: #764ba2;
+        }
+        
+        input[type="range"]:hover::-moz-range-thumb {
+            background: #764ba2;
         }
     </style>
 </head>
@@ -358,7 +392,7 @@
             <div class="controls">
                 <div class="control-group">
                     <label>Periodo de análisis:</label>
-                    <select id="periodType">
+                    <select id="periodType" onchange="updatePeriodSlider()">
                         <option value="year">Año</option>
                         <option value="semester">Semestre</option>
                         <option value="quarter4">Cuatrimestre</option>
@@ -380,65 +414,106 @@
                         </label>
                     </div>
                 </div>
-                <div class="control-group">
-                    <label>Orientación de tabla:</label>
-                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:5px;">
-                        <label style="font-weight:normal; display:flex; align-items:center; gap:8px;">
-                            <input type="radio" name="orientation" value="rows" checked>
-                            Periodos como filas
-                        </label>
-                        <label style="font-weight:normal; display:flex; align-items:center; gap:8px;">
-                            <input type="radio" name="orientation" value="cols">
-                            Periodos como columnas
-                        </label>
+            </div>
+            
+            <div style="margin-top:25px;">
+                <label style="font-weight:600; margin-bottom:10px; display:block;">Selección de Rango de Períodos:</label>
+                <div id="periodSliderContainer" style="padding:20px; background:#f8f9fa; border-radius:8px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <span id="sliderStartLabel">Inicio</span>
+                        <span id="sliderEndLabel">Fin</span>
+                    </div>
+                    <input type="range" id="periodSliderStart" min="0" max="100" value="0" 
+                           style="width:100%; margin-bottom:10px;" oninput="updateSliderLabels()">
+                    <input type="range" id="periodSliderEnd" min="0" max="100" value="100" 
+                           style="width:100%;" oninput="updateSliderLabels()">
+                    <div style="text-align:center; margin-top:10px; font-size:14px; color:#667eea;">
+                        <span id="selectedRangeText">Seleccione el rango</span>
                     </div>
                 </div>
             </div>
-            <button onclick="analyzeData()" style="width:100%; margin-top:15px;">Extraer Datos</button>
+            
+            <div style="margin-top:20px;">
+                <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
+                    <input type="checkbox" id="crossYearComparison" onchange="toggleCrossYearOptions()">
+                    Comparar mismos períodos entre años
+                </label>
+                <div id="crossYearOptions" style="display:none; margin-top:10px; padding:15px; background:#f0f2ff; border-radius:8px;">
+                    <div class="control-group">
+                        <label>Período a comparar:</label>
+                        <select id="crossYearPeriod"></select>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label>Años a incluir:</label>
+                        <div id="yearCheckboxes" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:8px;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="showCrossAnalysisConfig()" style="width:100%; margin-top:15px;">Configurar Análisis Cruzado</button>
+        </div>
+        
+        <div class="step" id="crossAnalysisStep" style="display:none;">
+            <h2>Paso 3: Configurar Análisis Cruzado</h2>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label>Categoría a Analizar (Columnas):</label>
+                    <select id="crossCategory">
+                        <option value="classification">Clasificación</option>
+                        <option value="eventDimension">Dimensión de evento</option>
+                        <option value="eventType">Evento</option>
+                        <option value="vigilanceType">Tipo de vigilancia</option>
+                        <option value="consequences">Consecuencias en el paciente</option>
+                        <option value="reportingUnit">Unidad notificadora</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="margin-top:20px;">
+                <h3 style="font-size:16px; margin-bottom:10px;">Filtros Adicionales (Opcional):</h3>
+                <div id="additionalFilters"></div>
+                <button onclick="addAdditionalFilter()" style="margin-top:10px; background:#28a745;">+ Agregar Filtro</button>
+            </div>
+            
+            <div style="margin-top:25px;">
+                <h3 style="font-size:16px; margin-bottom:10px;">Filtrar por Servicio de Ocurrencia:</h3>
+                <div style="background:#f8f9fa; padding:15px; border-radius:8px;">
+                    <div style="margin-bottom:10px;">
+                        <button onclick="selectAllServices(true)" style="margin-right:10px;">Seleccionar todos</button>
+                        <button onclick="selectAllServices(false)">Deseleccionar todos</button>
+                    </div>
+                    <div id="serviceFilters" style="max-height:200px; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:8px;"></div>
+                </div>
+            </div>
+            
+            <div style="margin-top:25px;">
+                <h3 style="font-size:16px; margin-bottom:10px;">Grupos de Servicios:</h3>
+                <div style="background:#f8f9fa; padding:15px; border-radius:8px;">
+                    <div id="serviceGroups"></div>
+                    <button onclick="createNewServiceGroup()" style="margin-top:10px; background:#667eea;">+ Crear Nuevo Grupo</button>
+                </div>
+            </div>
+            
+            <div style="margin-top:25px;" id="unitFilterSection" style="display:none;">
+                <h3 style="font-size:16px; margin-bottom:10px;">Filtrar por Unidad Notificadora:</h3>
+                <div style="background:#f8f9fa; padding:15px; border-radius:8px;">
+                    <div style="margin-bottom:10px;">
+                        <button onclick="selectAllUnits(true)" style="margin-right:10px;">Seleccionar todas</button>
+                        <button onclick="selectAllUnits(false)">Deseleccionar todas</button>
+                    </div>
+                    <div id="unitFilters" style="max-height:200px; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:8px;"></div>
+                </div>
+            </div>
+            
+            <button onclick="generateCrossAnalysis()" style="width:100%; margin-top:15px; background:linear-gradient(135deg, #28a745 0%, #20c997 100%);">🔍 Generar Análisis</button>
         </div>
 
         <div id="resultsStep" style="display:none;">
             <div class="step">
-                <h2>Paso 3: Resultados</h2>
+                <h2>Resultados del Análisis</h2>
                 <div id="statsContainer" class="stats"></div>
                 <div id="previewContainer" class="preview"></div>
-                
-                <!-- Collapsible sections with no tables -->
-                <div class="step collapsible-section" style="margin-top: 20px;">
-                    <h2 onclick="toggleSection('section1')" style="cursor:pointer;">
-                        <span id="icon-section1">▶</span> Incidentes por Servicio
-                    </h2>
-                    <div id="section1" class="section-content" style="display:none;">
-                        <p style="color: #666; font-style: italic;">Sección disponible para futura implementación</p>
-                    </div>
-                </div>
-                
-                <div class="step collapsible-section">
-                    <h2 onclick="toggleSection('section2')" style="cursor:pointer;">
-                        <span id="icon-section2">▶</span> Servicio por Evento
-                    </h2>
-                    <div id="section2" class="section-content" style="display:none;">
-                        <p style="color: #666; font-style: italic;">Sección disponible para futura implementación</p>
-                    </div>
-                </div>
-                
-                <div class="step collapsible-section">
-                    <h2 onclick="toggleSection('section3')" style="cursor:pointer;">
-                        <span id="icon-section3">▶</span> Análisis de Tipo de Vigilancia
-                    </h2>
-                    <div id="section3" class="section-content" style="display:none;">
-                        <p style="color: #666; font-style: italic;">Sección disponible para futura implementación</p>
-                    </div>
-                </div>
-                
-                <div class="step collapsible-section">
-                    <h2 onclick="toggleSection('section4')" style="cursor:pointer;">
-                        <span id="icon-section4">▶</span> Reportes por Unidad
-                    </h2>
-                    <div id="section4" class="section-content" style="display:none;">
-                        <p style="color: #666; font-style: italic;">Sección disponible para futura implementación</p>
-                    </div>
-                </div>
                 
                 <div class="action-buttons">
                     <button onclick="downloadExcel()">📥 Descargar Excel</button>
@@ -456,87 +531,49 @@
         let unitsWorkbook = null;
         let unitsData = null;
         let fuzzyMatchResults = null;
+        let allPeriods = [];
+        let uniqueServices = [];
+        let uniqueUnits = [];
+        let serviceGroups = [];
+        let additionalFiltersCount = 0;
 
         const DEFAULT_UNITS = [
-            'PABELLÓN CENTRAL',
-            'UNIDAD CORONARIA',
-            'HOSP. GINECO OBSTÉTRICA',
-            'ONCOLOGÍA ADULTO',
-            'NEONATOLOGÍA',
-            'PABELLÓN GINECO OBSTÉTRICO',
-            'FARMACIA URGENCIA',
-            'INTENSIVO ADULTO',
-            'SERVICIOS EXTERNOS',
-            'TOMA DE MUESTRA',
-            'INTERMEDIO ADULTO',
-            'CONSULTAS MÉDICAS',
-            'HOSP. MÉDICO QUIRÚRGICO 1',
-            'IMAGENOLOGÍA',
-            'ENTREGA DE RESULTADOS',
-            'HOSP. PEDIÁTRICA',
-            'INTERMEDIO PEDIÁTRICO',
-            'INFECCIONES INTRAHOSPITALARIAS',
-            'ESTERILIZACIÓN',
-            'LABORATORIO',
-            'KINESIOLOGÍA',
-            'RECUPERACIÓN',
-            'INTENSIVO PEDIÁTRICO',
-            'CONSULTA MÉDICA GINECOLÓGICA',
-            'NURSERY',
-            'UNIDAD DE MEDICINA TRANSFUSIONAL',
-            'ONCOLOGÍA AMBULATORIA',
-            'UNIDAD DE PRESUPUESTOS',
-            'DIRECCIÓN SERVICIOS GENERALES',
-            'VACUNATORIO',
-            'PABELLÓN HEMODINAMIA',
-            'SERVICIO AL CLIENTE',
-            'PROCEDIMIENTOS AMBULATORIOS',
-            'ENDOSCOPÍA',
-            'CALIDAD',
-            'PRE-QUIRÚRGICO',
-            'GESTIÓN DE CAMAS',
-            'HOSP. MÉDICO QUIRÚRGICO 2',
-            'NUTRICIÓN',
-            'HOSPITALIZACIÓN TRANSITORIA (CIRUGÍA)',
-            'ABASTECIMIENTO',
-            'UNIDAD DE ARCHIVO',
-            'CONSULTAS MEDICAS (CLINICOS)',
-            'PET-CT',
-            'ALIMENTACIÓN',
-            'INFORMÁTICA',
-            'ADMISIÓN',
-            'EQUIPOS MÉDICOS',
-            'ANATOMÍA PATOLÓGICA',
-            'EXTERNO ESTERILIZACIÓN',
-            'TRAUMATOLOGIA',
-            'EXTERNO HEMODINAMIA',
-            'CONTRALORÍA',
-            'EXTERNO FARMACIA',
-            'UROLOGIA',
-            'SUBDIRECCIÓN MÉDICA',
-            'SUBDIRECTORA DE ENFERMERÍA',
-            'CONSULTAS MEDICAS (ADMINISTRATIVO)'
+            'PABELLÓN CENTRAL', 'UNIDAD CORONARIA', 'HOSP. GINECO OBSTÉTRICA', 'ONCOLOGÍA ADULTO',
+            'NEONATOLOGÍA', 'PABELLÓN GINECO OBSTÉTRICO', 'FARMACIA URGENCIA', 'INTENSIVO ADULTO',
+            'SERVICIOS EXTERNOS', 'TOMA DE MUESTRA', 'INTERMEDIO ADULTO', 'CONSULTAS MÉDICAS',
+            'HOSP. MÉDICO QUIRÚRGICO 1', 'IMAGENOLOGÍA', 'ENTREGA DE RESULTADOS', 'HOSP. PEDIÁTRICA',
+            'INTERMEDIO PEDIÁTRICO', 'INFECCIONES INTRAHOSPITALARIAS', 'ESTERILIZACIÓN', 'LABORATORIO',
+            'KINESIOLOGÍA', 'RECUPERACIÓN', 'INTENSIVO PEDIÁTRICO', 'CONSULTA MÉDICA GINECOLÓGICA',
+            'NURSERY', 'UNIDAD DE MEDICINA TRANSFUSIONAL', 'ONCOLOGÍA AMBULATORIA', 'UNIDAD DE PRESUPUESTOS',
+            'DIRECCIÓN SERVICIOS GENERALES', 'VACUNATORIO', 'PABELLÓN HEMODINAMIA', 'SERVICIO AL CLIENTE',
+            'PROCEDIMIENTOS AMBULATORIOS', 'ENDOSCOPÍA', 'CALIDAD', 'PRE-QUIRÚRGICO', 'GESTIÓN DE CAMAS',
+            'HOSP. MÉDICO QUIRÚRGICO 2', 'NUTRICIÓN', 'HOSPITALIZACIÓN TRANSITORIA (CIRUGÍA)', 'ABASTECIMIENTO',
+            'UNIDAD DE ARCHIVO', 'CONSULTAS MEDICAS (CLINICOS)', 'PET-CT', 'ALIMENTACIÓN', 'INFORMÁTICA',
+            'ADMISIÓN', 'EQUIPOS MÉDICOS', 'ANATOMÍA PATOLÓGICA', 'EXTERNO ESTERILIZACIÓN', 'TRAUMATOLOGIA',
+            'EXTERNO HEMODINAMIA', 'CONTRALORÍA', 'EXTERNO FARMACIA', 'UROLOGIA', 'SUBDIRECCIÓN MÉDICA',
+            'SUBDIRECTORA DE ENFERMERÍA', 'CONSULTAS MEDICAS (ADMINISTRATIVO)'
         ];
 
         const UNIT_GROUPS = {
-            'Hospitalizados': [
-                'PABELLÓN CENTRAL',
-                'UNIDAD CORONARIA',
-                'HOSP. GINECO OBSTÉTRICA',
-                'ONCOLOGÍA ADULTO',
-                'NEONATOLOGÍA',
-                'PABELLÓN GINECO OBSTÉTRICO',
-                'INTENSIVO ADULTO',
-                'INTERMEDIO ADULTO',
-                'HOSP. MÉDICO QUIRÚRGICO 1',
-                'HOSP. PEDIÁTRICA',
-                'INTERMEDIO PEDIÁTRICO',
-                'RECUPERACIÓN',
-                'INTENSIVO PEDIÁTRICO',
-                'PABELLÓN HEMODINAMIA',
-                'HOSP. MÉDICO QUIRÚRGICO 2'
+            'Hospitalización': [
+                'PABELLÓN CENTRAL', 'UNIDAD CORONARIA', 'HOSP. GINECO OBSTÉTRICA', 'ONCOLOGÍA ADULTO',
+                'NEONATOLOGÍA', 'PABELLÓN GINECO OBSTÉTRICO', 'INTENSIVO ADULTO', 'INTERMEDIO ADULTO',
+                'HOSP. MÉDICO QUIRÚRGICO 1', 'HOSP. PEDIÁTRICA', 'INTERMEDIO PEDIÁTRICO', 'RECUPERACIÓN',
+                'INTENSIVO PEDIÁTRICO', 'PABELLÓN HEMODINAMIA', 'HOSP. MÉDICO QUIRÚRGICO 2'
             ]
         };
+        
+        function initializeServiceGroups() {
+            serviceGroups = [];
+            for (let [name, services] of Object.entries(UNIT_GROUPS)) {
+                serviceGroups.push({
+                    id: 'predefined_' + name,
+                    name: name,
+                    services: [...services],
+                    predefined: true
+                });
+            }
+        }
 
         document.getElementById('fileInput').addEventListener('change', handleFile);
         document.getElementById('unitsFileInput').addEventListener('change', handleUnitsFile);
@@ -662,6 +699,9 @@
                 }
             }
             
+            indices.eventDimension = findColumnIndex(headers, ['dimensión de evento', 'dimension de evento']);
+            indices.consequences = findColumnIndex(headers, ['consecuencias en el paciente', 'consecuencias']);
+            
             if (missing.length > 0) {
                 return {
                     valid: false,
@@ -727,6 +767,12 @@
                     • Duplicados eliminados: ${rows.length - uniqueRows.length}<br>
                     • Filas únicas: ${uniqueRows.length}
                 `;
+                
+                initializeServiceGroups();
+                extractUniqueServices();
+                buildAllPeriods();
+                updatePeriodSlider();
+                
                 document.getElementById('analysisStep').style.display = 'block';
                 hideLoading();
 
@@ -735,8 +781,670 @@
                 showError(`Error al procesar el archivo: ${error.message}`);
             }
         }
+        
+        function extractUniqueServices() {
+            const serviceCol = columnIndices.serviceVerified;
+            const services = new Set();
+            
+            cleanedData.rows.forEach(row => {
+                const service = row[serviceCol];
+                if (service && String(service).trim()) {
+                    services.add(String(service).trim());
+                }
+            });
+            
+            uniqueServices = Array.from(services).sort();
+        }
+        
+        function buildAllPeriods() {
+            const periodType = document.getElementById('periodType').value;
+            const dateType = document.querySelector('input[name="dateType"]:checked').value;
+            const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
+            
+            const periods = new Set();
+            
+            cleanedData.rows.forEach(row => {
+                const dateStr = row[dateColIndex];
+                const date = parseDate(dateStr);
+                if (date) {
+                    const period = getPeriodKey(date, periodType);
+                    if (period !== 'Sin fecha') {
+                        periods.add(period);
+                    }
+                }
+            });
+            
+            allPeriods = sortPeriods(Array.from(periods), periodType);
+        }
+        
+        function updatePeriodSlider() {
+            if (!cleanedData) return;
+            
+            buildAllPeriods();
+            
+            const startSlider = document.getElementById('periodSliderStart');
+            const endSlider = document.getElementById('periodSliderEnd');
+            
+            startSlider.max = allPeriods.length - 1;
+            endSlider.max = allPeriods.length - 1;
+            startSlider.value = 0;
+            endSlider.value = allPeriods.length - 1;
+            
+            updateSliderLabels();
+            updateCrossYearPeriodOptions();
+        }
+        
+        function updateSliderLabels() {
+            const startIdx = parseInt(document.getElementById('periodSliderStart').value);
+            const endIdx = parseInt(document.getElementById('periodSliderEnd').value);
+            
+            if (startIdx > endIdx) {
+                document.getElementById('periodSliderStart').value = endIdx;
+                document.getElementById('periodSliderEnd').value = startIdx;
+                return updateSliderLabels();
+            }
+            
+            document.getElementById('sliderStartLabel').textContent = allPeriods[startIdx] || 'Inicio';
+            document.getElementById('sliderEndLabel').textContent = allPeriods[endIdx] || 'Fin';
+            
+            const count = endIdx - startIdx + 1;
+            document.getElementById('selectedRangeText').textContent = 
+                `${allPeriods[startIdx]} a ${allPeriods[endIdx]} (${count} períodos)`;
+        }
+        
+        function toggleCrossYearOptions() {
+            const checkbox = document.getElementById('crossYearComparison');
+            const options = document.getElementById('crossYearOptions');
+            options.style.display = checkbox.checked ? 'block' : 'none';
+            
+            if (checkbox.checked) {
+                updateCrossYearYearCheckboxes();
+            }
+        }
+        
+        function updateCrossYearPeriodOptions() {
+            const periodType = document.getElementById('periodType').value;
+            const select = document.getElementById('crossYearPeriod');
+            select.innerHTML = '';
+            
+            const periodSet = new Set();
+            allPeriods.forEach(p => {
+                const parts = p.split('-');
+                if (parts.length > 1) {
+                    periodSet.add(parts[1]);
+                }
+            });
+            
+            Array.from(periodSet).sort().forEach(period => {
+                const option = document.createElement('option');
+                option.value = period;
+                option.textContent = period;
+                select.appendChild(option);
+            });
+        }
+        
+        function updateCrossYearYearCheckboxes() {
+            const years = new Set();
+            allPeriods.forEach(p => {
+                const year = p.split('-')[0];
+                if (year) years.add(year);
+            });
+            
+            const container = document.getElementById('yearCheckboxes');
+            container.innerHTML = '';
+            
+            Array.from(years).sort().forEach(year => {
+                const label = document.createElement('label');
+                label.style.cssText = 'display:flex; align-items:center; gap:5px;';
+                label.innerHTML = `<input type="checkbox" value="${year}" checked> ${year}`;
+                container.appendChild(label);
+            });
+        }
+        
+        function showCrossAnalysisConfig() {
+            if (!cleanedData) {
+                showError('Primero debes cargar un archivo.');
+                return;
+            }
+            
+            buildServiceFilters();
+            renderServiceGroups();
+            buildAdditionalFilterOptions();
+            
+            if (fuzzyMatchResults) {
+                extractUniqueUnits();
+                buildUnitFilters();
+                document.getElementById('unitFilterSection').style.display = 'block';
+            }
+            
+            document.getElementById('crossAnalysisStep').style.display = 'block';
+            document.getElementById('crossAnalysisStep').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function buildServiceFilters() {
+            const container = document.getElementById('serviceFilters');
+            container.innerHTML = '';
+            
+            uniqueServices.forEach(service => {
+                const label = document.createElement('label');
+                label.style.cssText = 'display:flex; align-items:center; gap:5px; font-size:13px;';
+                label.innerHTML = `<input type="checkbox" class="service-filter" value="${service}" checked> ${service}`;
+                container.appendChild(label);
+            });
+        }
+        
+        function extractUniqueUnits() {
+            if (!fuzzyMatchResults) return;
+            
+            const units = new Set();
+            Object.values(fuzzyMatchResults.reporterToUnit).forEach(match => {
+                if (match.unit && match.unit !== 'Sin match') {
+                    units.add(match.unit);
+                }
+            });
+            
+            uniqueUnits = Array.from(units).sort();
+        }
+        
+        function buildUnitFilters() {
+            const container = document.getElementById('unitFilters');
+            container.innerHTML = '';
+            
+            uniqueUnits.forEach(unit => {
+                const label = document.createElement('label');
+                label.style.cssText = 'display:flex; align-items:center; gap:5px; font-size:13px;';
+                label.innerHTML = `<input type="checkbox" class="unit-filter" value="${unit}" checked> ${unit}`;
+                container.appendChild(label);
+            });
+        }
+        
+        function selectAllServices(select) {
+            document.querySelectorAll('.service-filter').forEach(cb => cb.checked = select);
+        }
+        
+        function selectAllUnits(select) {
+            document.querySelectorAll('.unit-filter').forEach(cb => cb.checked = select);
+        }
+        
+        function renderServiceGroups() {
+            const container = document.getElementById('serviceGroups');
+            container.innerHTML = '';
+            
+            serviceGroups.forEach(group => {
+                const groupDiv = document.createElement('div');
+                groupDiv.style.cssText = 'margin-bottom:15px; padding:10px; background:white; border-radius:5px; border:1px solid #ddd;';
                 
-        function handleUnitsFile(e) {
+                const header = document.createElement('div');
+                header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;';
+                
+                const title = document.createElement('strong');
+                title.textContent = group.name;
+                title.style.color = '#667eea';
+                
+                const buttons = document.createElement('div');
+                buttons.style.cssText = 'display:flex; gap:5px;';
+                
+                if (!group.predefined) {
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = 'Editar';
+                    editBtn.style.cssText = 'padding:3px 8px; font-size:11px; background:#ffc107;';
+                    editBtn.onclick = () => editServiceGroup(group.id);
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Eliminar';
+                    deleteBtn.style.cssText = 'padding:3px 8px; font-size:11px; background:#dc3545;';
+                    deleteBtn.onclick = () => deleteServiceGroup(group.id);
+                    
+                    buttons.appendChild(editBtn);
+                    buttons.appendChild(deleteBtn);
+                }
+                
+                header.appendChild(title);
+                header.appendChild(buttons);
+                
+                const servicesList = document.createElement('div');
+                servicesList.style.cssText = 'font-size:12px; color:#666; line-height:1.6;';
+                servicesList.textContent = '• ' + group.services.join('\n• ');
+                servicesList.style.whiteSpace = 'pre-line';
+                
+                groupDiv.appendChild(header);
+                groupDiv.appendChild(servicesList);
+                container.appendChild(groupDiv);
+            });
+        }
+        
+        function createNewServiceGroup() {
+            const name = prompt('Nombre del nuevo grupo:');
+            if (!name) return;
+            
+            const selectedServices = [];
+            document.querySelectorAll('.service-filter:checked').forEach(cb => {
+                selectedServices.push(cb.value);
+            });
+            
+            if (selectedServices.length === 0) {
+                alert('Selecciona al menos un servicio.');
+                return;
+            }
+            
+            serviceGroups.push({
+                id: 'custom_' + Date.now(),
+                name: name,
+                services: selectedServices,
+                predefined: false
+            });
+            
+            renderServiceGroups();
+        }
+        
+        function editServiceGroup(id) {
+            const group = serviceGroups.find(g => g.id === id);
+            if (!group) return;
+            
+            const newName = prompt('Nuevo nombre:', group.name);
+            if (newName) {
+                group.name = newName;
+                renderServiceGroups();
+            }
+        }
+        
+        function deleteServiceGroup(id) {
+            if (confirm('¿Eliminar este grupo?')) {
+                serviceGroups = serviceGroups.filter(g => g.id !== id);
+                renderServiceGroups();
+            }
+        }
+        
+        function buildAdditionalFilterOptions() {
+            const container = document.getElementById('additionalFilters');
+            container.innerHTML = '';
+            additionalFiltersCount = 0;
+        }
+        
+        function addAdditionalFilter() {
+            const container = document.getElementById('additionalFilters');
+            const filterId = 'filter_' + (++additionalFiltersCount);
+            
+            const filterDiv = document.createElement('div');
+            filterDiv.id = filterId;
+            filterDiv.style.cssText = 'display:grid; grid-template-columns:200px 1fr auto; gap:10px; margin-bottom:10px; align-items:center;';
+            
+            const categorySelect = document.createElement('select');
+            categorySelect.className = 'filter-category';
+            categorySelect.innerHTML = `
+                <option value="">Seleccionar categoría...</option>
+                <option value="classification">Clasificación</option>
+                <option value="eventDimension">Dimensión de evento</option>
+                <option value="eventType">Evento</option>
+                <option value="vigilanceType">Tipo de vigilancia</option>
+                <option value="consequences">Consecuencias en el paciente</option>
+                <option value="reportingUnit">Unidad notificadora</option>
+            `;
+            categorySelect.onchange = () => updateFilterValues(filterId);
+            
+            const valueSelect = document.createElement('select');
+            valueSelect.className = 'filter-value';
+            valueSelect.multiple = true;
+            valueSelect.style.height = '80px';
+            valueSelect.disabled = true;
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = '✕';
+            removeBtn.style.cssText = 'padding:5px 10px; background:#dc3545;';
+            removeBtn.onclick = () => container.removeChild(filterDiv);
+            
+            filterDiv.appendChild(categorySelect);
+            filterDiv.appendChild(valueSelect);
+            filterDiv.appendChild(removeBtn);
+            
+            container.appendChild(filterDiv);
+        }
+        
+        function updateFilterValues(filterId) {
+            const filterDiv = document.getElementById(filterId);
+            const categorySelect = filterDiv.querySelector('.filter-category');
+            const valueSelect = filterDiv.querySelector('.filter-value');
+            
+            const category = categorySelect.value;
+            if (!category) {
+                valueSelect.disabled = true;
+                valueSelect.innerHTML = '';
+                return;
+            }
+            
+            const colIndex = getCategoryColumnIndex(category);
+            const values = new Set();
+            
+            cleanedData.rows.forEach(row => {
+                const val = row[colIndex];
+                if (val && String(val).trim()) {
+                    values.add(String(val).trim());
+                } else {
+                    values.add('Sin información');
+                }
+            });
+            
+            valueSelect.innerHTML = '';
+            valueSelect.disabled = false;
+            
+            Array.from(values).sort().forEach(val => {
+                const option = document.createElement('option');
+                option.value = val;
+                option.textContent = val;
+                option.selected = true;
+                valueSelect.appendChild(option);
+            });
+        }
+        
+        function getCategoryColumnIndex(category) {
+            const mapping = {
+                'classification': columnIndices.classification,
+                'eventDimension': columnIndices.eventDimension || findColumnIndex(cleanedData.headers, ['dimensión de evento', 'dimension de evento']),
+                'eventType': columnIndices.eventType,
+                'vigilanceType': columnIndices.vigilanceType,
+                'consequences': findColumnIndex(cleanedData.headers, ['consecuencias en el paciente', 'consecuencias'])
+            };
+            return mapping[category];
+        }
+        
+        function generateCrossAnalysis() {
+            try {
+                showLoading('Generando análisis cruzado...');
+                
+                const crossCategory = document.getElementById('crossCategory').value;
+                const periodType = document.getElementById('periodType').value;
+                const dateType = document.querySelector('input[name="dateType"]:checked').value;
+                const crossYearEnabled = document.getElementById('crossYearComparison').checked;
+                
+                let selectedPeriods = [];
+                
+                if (crossYearEnabled) {
+                    const selectedPeriod = document.getElementById('crossYearPeriod').value;
+                    const selectedYears = Array.from(document.querySelectorAll('#yearCheckboxes input:checked')).map(cb => cb.value);
+                    
+                    selectedPeriods = allPeriods.filter(p => {
+                        const parts = p.split('-');
+                        return parts.length > 1 && parts[1] === selectedPeriod && selectedYears.includes(parts[0]);
+                    });
+                } else {
+                    const startIdx = parseInt(document.getElementById('periodSliderStart').value);
+                    const endIdx = parseInt(document.getElementById('periodSliderEnd').value);
+                    selectedPeriods = allPeriods.slice(startIdx, endIdx + 1);
+                }
+                
+                const selectedServices = Array.from(document.querySelectorAll('.service-filter:checked')).map(cb => cb.value);
+                const selectedUnits = fuzzyMatchResults ? Array.from(document.querySelectorAll('.unit-filter:checked')).map(cb => cb.value) : [];
+                
+                const additionalFilters = [];
+                document.querySelectorAll('#additionalFilters > div').forEach(filterDiv => {
+                    const category = filterDiv.querySelector('.filter-category').value;
+                    const values = Array.from(filterDiv.querySelector('.filter-value').selectedOptions).map(o => o.value);
+                    if (category && values.length > 0) {
+                        additionalFilters.push({ category, values });
+                    }
+                });
+                
+                const crossData = performCrossAnalysis({
+                    crossCategory,
+                    periodType,
+                    dateType,
+                    selectedPeriods,
+                    selectedServices,
+                    selectedUnits,
+                    additionalFilters
+                });
+                
+                displayCrossAnalysisResults(crossData);
+                hideLoading();
+                
+            } catch (error) {
+                hideLoading();
+                showError(`Error al generar análisis cruzado: ${error.message}`);
+            }
+        }
+        
+        function performCrossAnalysis(config) {
+            const { crossCategory, periodType, dateType, selectedPeriods, selectedServices, selectedUnits, additionalFilters } = config;
+            
+            const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
+            const serviceCol = columnIndices.serviceVerified;
+            const crossColIndex = getCategoryColumnIndex(crossCategory);
+            
+            const categoryValues = new Set();
+            const periodData = {};
+            const serviceGroupData = {};
+            
+            selectedPeriods.forEach(period => {
+                periodData[period] = {};
+                serviceGroups.forEach(group => {
+                    serviceGroupData[period] = serviceGroupData[period] || {};
+                    serviceGroupData[period][group.name] = {};
+                });
+            });
+            
+            cleanedData.rows.forEach(row => {
+                const dateStr = row[dateColIndex];
+                const date = parseDate(dateStr);
+                const period = getPeriodKey(date, periodType);
+                
+                if (!selectedPeriods.includes(period)) return;
+                
+                const service = String(row[serviceCol] || '').trim();
+                if (!selectedServices.includes(service)) return;
+                
+                if (fuzzyMatchResults && selectedUnits.length > 0) {
+                    const reporter = String(row[fuzzyMatchResults.reporterIdx] || '').trim();
+                    const match = fuzzyMatchResults.reporterToUnit[reporter];
+                    if (!match || !selectedUnits.includes(match.unit)) return;
+                }
+                
+                let passesFilters = true;
+                for (let filter of additionalFilters) {
+                    const colIdx = getCategoryColumnIndex(filter.category);
+                    const value = String(row[colIdx] || 'Sin información').trim() || 'Sin información';
+                    if (!filter.values.includes(value)) {
+                        passesFilters = false;
+                        break;
+                    }
+                }
+                if (!passesFilters) return;
+                
+                let categoryValue = String(row[crossColIndex] || 'Sin información').trim() || 'Sin información';
+                
+                if (crossCategory === 'reportingUnit' && fuzzyMatchResults) {
+                    const reporter = String(row[fuzzyMatchResults.reporterIdx] || '').trim();
+                    const match = fuzzyMatchResults.reporterToUnit[reporter];
+                    categoryValue = match ? match.unit : 'Sin información';
+                }
+                
+                categoryValues.add(categoryValue);
+                
+                if (!periodData[period][categoryValue]) {
+                    periodData[period][categoryValue] = 0;
+                }
+                periodData[period][categoryValue]++;
+                
+                serviceGroups.forEach(group => {
+                    if (group.services.includes(service)) {
+                        if (!serviceGroupData[period][group.name][categoryValue]) {
+                            serviceGroupData[period][group.name][categoryValue] = 0;
+                        }
+                        serviceGroupData[period][group.name][categoryValue]++;
+                    }
+                });
+            });
+            
+            const sortedCategories = Array.from(categoryValues).sort();
+            
+            selectedPeriods.forEach(period => {
+                sortedCategories.forEach(cat => {
+                    if (!periodData[period][cat]) {
+                        periodData[period][cat] = 0;
+                    }
+                });
+            });
+            
+            return {
+                config,
+                periodData,
+                serviceGroupData,
+                sortedCategories,
+                selectedPeriods
+            };
+        }
+        
+        function displayCrossAnalysisResults(crossData) {
+            const { periodData, serviceGroupData, sortedCategories, selectedPeriods, config } = crossData;
+            
+            const categoryNames = {
+                'classification': 'Clasificación',
+                'eventDimension': 'Dimensión de evento',
+                'eventType': 'Evento',
+                'vigilanceType': 'Tipo de vigilancia',
+                'consequences': 'Consecuencias en el paciente',
+                'reportingUnit': 'Unidad notificadora'
+            };
+            
+            let tableHtml = `
+                <div class="step collapsible-section">
+                    <h2 onclick="toggleSection('crossAnalysisTable')" style="cursor:pointer;">
+                        <span id="icon-crossAnalysisTable">▼</span> Análisis Cruzado: ${categoryNames[config.crossCategory]}
+                    </h2>
+                    <div id="crossAnalysisTable" class="section-content">
+                        <div class="preview">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Período</th>
+            `;
+            
+            sortedCategories.forEach(cat => {
+                tableHtml += `<th>${cat}<button class="copy-btn" onclick="copyCrossColumn(event, '${cat}')">copiar</button></th>`;
+            });
+            tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyCrossColumn(event, \'TOTAL\')">copiar</button></th></tr></thead><tbody>';
+            
+            selectedPeriods.forEach(period => {
+                let rowTotal = 0;
+                sortedCategories.forEach(cat => {
+                    rowTotal += periodData[period][cat] || 0;
+                });
+                
+                tableHtml += `<tr data-cross-row="${period}"><td><strong>${period}</strong><button class="row-copy-btn" onclick="copyCrossRow(event, '${period}')">copiar</button></td>`;
+                sortedCategories.forEach(cat => {
+                    tableHtml += `<td data-cross-col="${cat}">${periodData[period][cat] || 0}</td>`;
+                });
+                tableHtml += `<td data-cross-col="TOTAL"><strong>${rowTotal}</strong></td></tr>`;
+                
+                serviceGroups.forEach(group => {
+                    let groupTotal = 0;
+                    sortedCategories.forEach(cat => {
+                        groupTotal += serviceGroupData[period][group.name][cat] || 0;
+                    });
+                    
+                    if (groupTotal > 0) {
+                        tableHtml += `<tr style="background:#f8f9fa; font-size:12px;" data-cross-row="${period}_${group.name}">
+                            <td style="padding-left:30px;">└ ${group.name}<button class="row-copy-btn" onclick="copyCrossRow(event, '${period}_${group.name}')">copiar</button></td>`;
+                        sortedCategories.forEach(cat => {
+                            tableHtml += `<td data-cross-col="${cat}">${serviceGroupData[period][group.name][cat] || 0}</td>`;
+                        });
+                        tableHtml += `<td data-cross-col="TOTAL">${groupTotal}</td></tr>`;
+                    }
+                });
+            });
+            
+            const columnTotals = {};
+            let grandTotal = 0;
+            sortedCategories.forEach(cat => {
+                columnTotals[cat] = 0;
+                selectedPeriods.forEach(period => {
+                    columnTotals[cat] += periodData[period][cat] || 0;
+                });
+                grandTotal += columnTotals[cat];
+            });
+            
+            tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;" data-cross-row="TOTAL"><td>TOTAL<button class="row-copy-btn" onclick="copyCrossRow(event, \'TOTAL\')">copiar</button></td>';
+            sortedCategories.forEach(cat => {
+                tableHtml += `<td data-cross-col="${cat}">${columnTotals[cat]}</td>`;
+            });
+            tableHtml += `<td data-cross-col="TOTAL">${grandTotal}</td></tr>`;
+            
+            tableHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            `;
+            
+            document.getElementById('resultsStep').style.display = 'block';
+            document.getElementById('previewContainer').innerHTML = tableHtml;
+            
+            analysisResults = {
+                crossData: crossData,
+                type: 'cross'
+            };
+            
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-value">${grandTotal}</div>
+                    <div class="stat-label">Total Eventos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${selectedPeriods.length}</div>
+                    <div class="stat-label">Períodos Analizados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${sortedCategories.length}</div>
+                    <div class="stat-label">Categorías Encontradas</div>
+                </div>
+            `;
+            document.getElementById('statsContainer').innerHTML = statsHtml;
+            
+            document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function copyCrossColumn(event, columnName) {
+            event.stopPropagation();
+            
+            try {
+                const cells = document.querySelectorAll(`td[data-cross-col="${columnName}"]`);
+                const values = Array.from(cells).slice(0, -1).map(cell => cell.textContent.trim());
+                const text = values.join('\n');
+                
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopiedNotification(`Columna "${columnName}" copiada`);
+                }).catch(err => {
+                    alert('Error al copiar: ' + err);
+                });
+            } catch (error) {
+                alert('Error al copiar columna: ' + error.message);
+            }
+        }
+
+        function copyCrossRow(event, rowName) {
+            event.stopPropagation();
+            
+            try {
+                const row = document.querySelector(`tr[data-cross-row="${rowName}"]`);
+                if (!row) {
+                    alert('No se encontró la fila');
+                    return;
+                }
+                
+                const cells = row.querySelectorAll('td');
+                const values = Array.from(cells).slice(1, -1).map(cell => cell.textContent.trim());
+                const text = values.join('\t');
+                
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopiedNotification(`Fila "${rowName}" copiada`);
+                }).catch(err => {
+                    alert('Error al copiar: ' + err);
+                });
+            } catch (error) {
+                alert('Error al copiar fila: ' + error.message);
+            }
+        }
+function handleUnitsFile(e) {
             const file = e.target.files[0];
             if (!file) return;
 
@@ -760,7 +1468,7 @@
             reader.readAsArrayBuffer(file);
         }
 
-        function processUnitsFile() {
+function processUnitsFile() {
             try {
                 const firstSheet = unitsWorkbook.Sheets[unitsWorkbook.SheetNames[0]];
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
@@ -792,7 +1500,7 @@
             }
         }
 
-        function performFuzzyMatching() {
+function performFuzzyMatching() {
             if (!cleanedData || !unitsData) return;
 
             showLoading('Realizando fuzzy matching...');
@@ -930,12 +1638,13 @@
             }
         }
 
-        function calculateSimilarity(str1, str2) {
+function calculateSimilarity(str1, str2) {
+            if (str1.length > 100 || str2.length > 100) return 0;
+            
             const longer = str1.length > str2.length ? str1 : str2;
             const shorter = str1.length > str2.length ? str2 : str1;
             
             if (longer.length === 0) return 1.0;
-            
             if (str1 === str2) return 1.0;
             if (longer.includes(shorter)) return 0.85;
             
@@ -972,7 +1681,7 @@
             return 1 - (prevRow[shorter.length] / longer.length);
         }
 
-        function parseDate(dateStr) {
+function parseDate(dateStr) {
             if (!dateStr) return null;
             
             if (dateStr instanceof Date && !isNaN(dateStr)) {
@@ -999,8 +1708,8 @@
             
             return null;
         }
-        
-        function getWeekNumber(date) {
+
+function getWeekNumber(date) {
             const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
             const dayNum = d.getDay() || 7;
             d.setDate(d.getDate() + 4 - dayNum);
@@ -1009,7 +1718,8 @@
             return { year: d.getFullYear(), week: weekNo };
         }
 
-        function getPeriodKey(date, periodType) {
+
+function getPeriodKey(date, periodType) {
             if (!date) return 'Sin fecha';
             
             const year = date.getFullYear();
@@ -1038,7 +1748,7 @@
             }
         }
 
-        function sortPeriods(periods, periodType) {
+function sortPeriods(periods, periodType) {
             return periods.sort((a, b) => {
                 const parseA = a.split('-');
                 const parseB = b.split('-');
@@ -1066,163 +1776,7 @@
                 return 0;
             });
         }
-        
-        function analyzeData() {
-            try {
-                showLoading('Analizando datos...');
-
-                const periodType = document.getElementById('periodType').value;
-                const dateType = document.querySelector('input[name="dateType"]:checked').value;
-                const orientation = document.querySelector('input[name="orientation"]:checked').value;
-                
-                const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
-                const classificationColIndex = columnIndices.classification;
-            
-                const classifications = ['Descarte', 'Incidente', 'Near Miss', 'Adverso', 'Centinela', 'Sin clasificación'];
-                const periodData = {};
-            
-                cleanedData.rows.forEach((row, index) => {
-                    const dateStr = row[dateColIndex];
-                    let classification = row[classificationColIndex];
-                    
-                    if (!classification || classification.toString().trim() === '') {
-                        classification = 'Sin clasificación';
-                    }
-                    
-                    const date = parseDate(dateStr);
-                    const period = getPeriodKey(date, periodType);
-                    
-                    if (!periodData[period]) {
-                        periodData[period] = {
-                            'Descarte': 0,
-                            'Incidente': 0,
-                            'Near Miss': 0,
-                            'Adverso': 0,
-                            'Centinela': 0,
-                            'Sin clasificación': 0,
-                            'TOTAL': 0
-                        };
-                    }
-                    
-                    if (classifications.includes(classification)) {
-                        periodData[period][classification]++;
-                        periodData[period]['TOTAL']++;
-                    } else {
-                        periodData[period]['TOTAL']++;
-                    }
-                });
-            
-                const sortedPeriods = sortPeriods(Object.keys(periodData), periodType);
-            
-                analysisResults = {
-                    periodType,
-                    dateType,
-                    orientation,
-                    periodData,
-                    sortedPeriods,
-                    classifications
-                };
-            
-                displayResults();
-                hideLoading();
-
-            } catch (error) {
-                hideLoading();
-                showError(`Error al analizar los datos: ${error.message}`);
-            }
-        }
-
-        function displayResults() {
-            const { periodData, sortedPeriods, classifications, orientation } = analysisResults;
-            
-            let totalEvents = 0;
-            const classificationTotals = {};
-            classifications.forEach(c => classificationTotals[c] = 0);
-            
-            sortedPeriods.forEach(period => {
-                totalEvents += periodData[period]['TOTAL'];
-                classifications.forEach(c => {
-                    classificationTotals[c] += periodData[period][c];
-                });
-            });
-            
-            const statsHtml = `
-                <div class="stat-card">
-                    <div class="stat-value">${totalEvents}</div>
-                    <div class="stat-label">Total Eventos</div>
-                </div>
-                ${classifications.map(c => `
-                    <div class="stat-card">
-                        <div class="stat-value">${classificationTotals[c]}</div>
-                        <div class="stat-label">${c}</div>
-                    </div>
-                `).join('')}
-            `;
-            document.getElementById('statsContainer').innerHTML = statsHtml;
-            
-            let tableHtml = `
-                <div class="step collapsible-section">
-                    <h2 onclick="toggleSection('mainTable')" style="cursor:pointer;">
-                        <span id="icon-mainTable">▶</span> Número de Incidentes de Seguridad del Paciente por Tipo en el Periodo
-                    </h2>
-                    <div id="mainTable" class="section-content" style="display:none;">
-                        <div class="preview">
-                            <table>
-            `;
-            
-            if (orientation === 'rows') {
-                tableHtml += '<thead><tr><th>Periodo</th>';
-                classifications.forEach(c => tableHtml += `<th>${c}<button class="copy-btn" onclick="copyColumn(event, '${c}')">copiar</button></th>`);
-                tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyColumn(event, \'TOTAL\')">copiar</button></th></tr></thead><tbody>';
-                
-                sortedPeriods.forEach(period => {
-                    tableHtml += `<tr data-row="${period}"><td><strong>${period}</strong><button class="row-copy-btn" onclick="copyRow(event, '${period}')">copiar</button></td>`;
-                    classifications.forEach(c => {
-                        tableHtml += `<td data-col="${c}">${periodData[period][c]}</td>`;
-                    });
-                    tableHtml += `<td data-col="TOTAL"><strong>${periodData[period]['TOTAL']}</strong></td></tr>`;
-                });
-                
-                tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;" data-row="TOTAL"><td>TOTAL<button class="row-copy-btn" onclick="copyRow(event, \'TOTAL\')">copiar</button></td>';
-                classifications.forEach(c => {
-                    tableHtml += `<td data-col="${c}">${classificationTotals[c]}</td>`;
-                });
-                tableHtml += `<td data-col="TOTAL">${totalEvents}</td></tr>`;
-                                                
-            } else {
-                tableHtml += '<thead><tr><th>Clasificación</th>';
-                sortedPeriods.forEach(p => tableHtml += `<th>${p}<button class="copy-btn" onclick="copyColumn(event, '${p}')">copiar</button></th>`);
-                tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyColumn(event, \'TOTAL\')">copiar</button></th></tr></thead><tbody>';
-                
-                classifications.forEach(c => {
-                    tableHtml += `<tr data-row="${c}"><td><strong>${c}</strong><button class="row-copy-btn" onclick="copyRow(event, '${c}')">copiar</button></td>`;
-                    sortedPeriods.forEach(period => {
-                        tableHtml += `<td data-col="${period}">${periodData[period][c]}</td>`;
-                    });
-                    tableHtml += `<td data-col="TOTAL"><strong>${classificationTotals[c]}</strong></td></tr>`;
-                });
-                
-                tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;" data-row="TOTAL"><td>TOTAL<button class="row-copy-btn" onclick="copyRow(event, \'TOTAL\')">copiar</button></td>';
-                sortedPeriods.forEach(period => {
-                    tableHtml += `<td data-col="${period}">${periodData[period]['TOTAL']}</td>`;
-                });
-                tableHtml += `<td data-col="TOTAL">${totalEvents}</td></tr>`;
-            }
-            
-            tableHtml += `
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            `;
-            
-            document.getElementById('previewContainer').innerHTML = tableHtml;
-            document.getElementById('resultsStep').style.display = 'block';
-            document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function toggleSection(sectionId) {
+function toggleSection(sectionId) {
             const section = document.getElementById(sectionId);
             const icon = document.getElementById('icon-' + sectionId);
             
@@ -1235,54 +1789,65 @@
             }
         }
 
-        function downloadExcel() {
+function downloadExcel() {
             try {
+                if (!analysisResults) {
+                    showError('No hay datos para exportar');
+                    return;
+                }
+                
                 showLoading('Generando archivo Excel...');
 
-                const { periodData, sortedPeriods, classifications, orientation } = analysisResults;
-            
                 const wb = XLSX.utils.book_new();
-                let wsData = [];
-            
-                if (orientation === 'rows') {
-                    wsData.push(['Periodo', ...classifications, 'TOTAL']);
+                
+                if (analysisResults.type === 'cross') {
+                    const { crossData } = analysisResults;
+                    const { periodData, serviceGroupData, sortedCategories, selectedPeriods, config } = crossData;
                     
-                    sortedPeriods.forEach(period => {
+                    let wsData = [['Período', ...sortedCategories, 'TOTAL']];
+                    
+                    selectedPeriods.forEach(period => {
+                        let rowTotal = 0;
                         const row = [period];
-                        classifications.forEach(c => row.push(periodData[period][c]));
-                        row.push(periodData[period]['TOTAL']);
+                        sortedCategories.forEach(cat => {
+                            const val = periodData[period][cat] || 0;
+                            row.push(val);
+                            rowTotal += val;
+                        });
+                        row.push(rowTotal);
                         wsData.push(row);
+                        
+                        serviceGroups.forEach(group => {
+                            let groupTotal = 0;
+                            const groupRow = [`  ${group.name}`];
+                            sortedCategories.forEach(cat => {
+                                const val = serviceGroupData[period][group.name][cat] || 0;
+                                groupRow.push(val);
+                                groupTotal += val;
+                            });
+                            if (groupTotal > 0) {
+                                groupRow.push(groupTotal);
+                                wsData.push(groupRow);
+                            }
+                        });
                     });
                     
                     const totalRow = ['TOTAL'];
-                    classifications.forEach(c => {
-                        const total = sortedPeriods.reduce((sum, p) => sum + periodData[p][c], 0);
-                        totalRow.push(total);
+                    let grandTotal = 0;
+                    sortedCategories.forEach(cat => {
+                        let colTotal = 0;
+                        selectedPeriods.forEach(period => {
+                            colTotal += periodData[period][cat] || 0;
+                        });
+                        totalRow.push(colTotal);
+                        grandTotal += colTotal;
                     });
-                    const grandTotal = sortedPeriods.reduce((sum, p) => sum + periodData[p]['TOTAL'], 0);
                     totalRow.push(grandTotal);
                     wsData.push(totalRow);
                     
-                } else {
-                    wsData.push(['Clasificación', ...sortedPeriods, 'TOTAL']);
-                    
-                    classifications.forEach(c => {
-                        const row = [c];
-                        sortedPeriods.forEach(period => row.push(periodData[period][c]));
-                        const total = sortedPeriods.reduce((sum, p) => sum + periodData[p][c], 0);
-                        row.push(total);
-                        wsData.push(row);
-                    });
-                    
-                    const totalRow = ['TOTAL'];
-                    sortedPeriods.forEach(period => totalRow.push(periodData[period]['TOTAL']));
-                    const grandTotal = sortedPeriods.reduce((sum, p) => sum + periodData[p]['TOTAL'], 0);
-                    totalRow.push(grandTotal);
-                    wsData.push(totalRow);
+                    const ws = XLSX.utils.aoa_to_sheet(wsData);
+                    XLSX.utils.book_append_sheet(wb, ws, 'Análisis Cruzado');
                 }
-            
-                const ws = XLSX.utils.aoa_to_sheet(wsData);
-                XLSX.utils.book_append_sheet(wb, ws, 'Resumen por Periodo');
             
                 XLSX.writeFile(wb, 'Analisis_Incidentes.xlsx');
                 hideLoading();
@@ -1293,54 +1858,14 @@
             }
         }
 
-        function resetAnalysis() {
+function resetAnalysis() {
             document.getElementById('resultsStep').style.display = 'none';
+            document.getElementById('crossAnalysisStep').style.display = 'none';
             document.getElementById('analysisStep').scrollIntoView({ behavior: 'smooth' });
         }
-        
-        function copyColumn(event, columnName) {
-            event.stopPropagation();
-            
-            try {
-                const cells = document.querySelectorAll(`td[data-col="${columnName}"]`);
-                const values = Array.from(cells).slice(0, -1).map(cell => cell.textContent.trim());
-                const text = values.join('\n');
-                
-                navigator.clipboard.writeText(text).then(() => {
-                    showCopiedNotification(`Columna "${columnName}" copiada`);
-                }).catch(err => {
-                    alert('Error al copiar: ' + err);
-                });
-            } catch (error) {
-                alert('Error al copiar columna: ' + error.message);
-            }
-        }
 
-        function copyRow(event, rowName) {
-            event.stopPropagation();
-            
-            try {
-                const row = document.querySelector(`tr[data-row="${rowName}"]`);
-                if (!row) {
-                    alert('No se encontró la fila');
-                    return;
-                }
-                
-                const cells = row.querySelectorAll('td');
-                const values = Array.from(cells).slice(1, -1).map(cell => cell.textContent.trim());
-                const text = values.join('\t');
-                
-                navigator.clipboard.writeText(text).then(() => {
-                    showCopiedNotification(`Fila "${rowName}" copiada`);
-                }).catch(err => {
-                    alert('Error al copiar: ' + err);
-                });
-            } catch (error) {
-                alert('Error al copiar fila: ' + error.message);
-            }
-        }
 
-        function showCopiedNotification(message) {
+function showCopiedNotification(message) {
             const notification = document.createElement('div');
             notification.className = 'copied-notification';
             notification.textContent = `✓ ${message}`;
