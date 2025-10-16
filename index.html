@@ -388,8 +388,8 @@
         </div>
 
         <div class="step" id="analysisStep" style="display:none;">
-            <h2>Paso 2: Configurar Análisis</h2>
-            <div class="controls">
+            <h2>Paso 2: Determinar Periodos</h2>
+            <div style="display:grid; grid-template-columns: 200px 250px 1fr; gap:20px; align-items:start;">
                 <div class="control-group">
                     <label>Periodo de análisis:</label>
                     <select id="periodType" onchange="updatePeriodSlider()">
@@ -414,21 +414,26 @@
                         </label>
                     </div>
                 </div>
+                <div style="background:#e7f3ff; padding:15px; border-radius:8px; border-left:4px solid #2196F3;">
+                    <div style="font-weight:600; margin-bottom:8px; color:#2196F3;">Ventana de Períodos:</div>
+                    <div id="selectedRangeText" style="font-size:14px; color:#333;">Seleccione el rango</div>
+                </div>
             </div>
             
             <div style="margin-top:25px;">
-                <label style="font-weight:600; margin-bottom:10px; display:block;">Selección de Rango de Períodos:</label>
-                <div id="periodSliderContainer" style="padding:20px; background:#f8f9fa; border-radius:8px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                        <span id="sliderStartLabel">Inicio</span>
-                        <span id="sliderEndLabel">Fin</span>
-                    </div>
-                    <input type="range" id="periodSliderStart" min="0" max="100" value="0" 
-                           style="width:100%; margin-bottom:10px;" oninput="updateSliderLabels()">
-                    <input type="range" id="periodSliderEnd" min="0" max="100" value="100" 
-                           style="width:100%;" oninput="updateSliderLabels()">
-                    <div style="text-align:center; margin-top:10px; font-size:14px; color:#667eea;">
-                        <span id="selectedRangeText">Seleccione el rango</span>
+                <h3 onclick="toggleSection('periodSliderSection')" style="cursor:pointer; font-size:16px; display:flex; align-items:center; gap:8px; color:#667eea;">
+                    <span id="icon-periodSliderSection">▼</span> Selección de Rango de Períodos
+                </h3>
+                <div id="periodSliderSection" class="section-content" style="margin-top:15px;">
+                    <div id="periodSliderContainer" style="padding:20px; background:#f8f9fa; border-radius:8px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <span id="sliderStartLabel">Inicio</span>
+                            <span id="sliderEndLabel">Fin</span>
+                        </div>
+                        <input type="range" id="periodSliderStart" min="0" max="100" value="0" 
+                               style="width:100%; margin-bottom:10px;" oninput="updateSliderLabels()">
+                        <input type="range" id="periodSliderEnd" min="0" max="100" value="100" 
+                               style="width:100%;" oninput="updateSliderLabels()">
                     </div>
                 </div>
             </div>
@@ -454,12 +459,42 @@
         </div>
         
         <div class="step" id="crossAnalysisStep" style="display:none;">
-            <h2>Paso 3: Configurar Análisis Cruzado</h2>
+            <h2>Paso 3: Selección de Unidades</h2>
+            
+            <div style="margin-bottom:30px;">
+                <div style="display:grid; grid-template-columns:1fr 100px 1fr; gap:20px; align-items:start;">
+                    <div style="border:2px solid #667eea; border-radius:8px; padding:15px; background:#f8f9fa;">
+                        <h3 style="margin:0 0 15px 0; color:#667eea; font-size:16px;">En análisis</h3>
+                        <div style="display:flex; gap:5px; margin-bottom:10px;">
+                            <button onclick="moveAllServices('in')" style="flex:1; font-size:12px; padding:5px;">Seleccionar todos</button>
+                        </div>
+                        <div id="servicesInAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex; flex-direction:column; justify-content:center; gap:10px;">
+                        <button onclick="moveAllServices('toOut')" style="padding:8px; font-size:20px;" title="Mover todos a 'Fuera de análisis'">→</button>
+                        <button onclick="moveAllServices('toIn')" style="padding:8px; font-size:20px;" title="Mover todos a 'En análisis'">←</button>
+                    </div>
+                    
+                    <div style="border:2px solid #dc3545; border-radius:8px; padding:15px; background:#fff0f0;">
+                        <h3 style="margin:0 0 15px 0; color:#dc3545; font-size:16px;">Fuera de análisis</h3>
+                        <div style="display:flex; gap:5px; margin-bottom:10px;">
+                            <button onclick="moveAllServices('out')" style="flex:1; font-size:12px; padding:5px; background:#dc3545;">Deseleccionar todos</button>
+                        </div>
+                        <div id="servicesOutAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h2 style="margin-top:30px;">Paso 4: Configurar Análisis Cruzado</h2>
             
             <div class="controls">
                 <div class="control-group">
                     <label>Categoría a Analizar (Columnas):</label>
-                    <select id="crossCategory">
+                    <select id="crossCategory" onchange="updateCategoryFilters()">
+                        <option value="">Seleccionar categoría...</option>
                         <option value="classification">Clasificación</option>
                         <option value="eventDimension">Dimensión de evento</option>
                         <option value="eventType">Evento</option>
@@ -470,48 +505,18 @@
                 </div>
             </div>
             
-            <div style="margin-top:20px;">
-                <h3 style="font-size:16px; margin-bottom:10px;">Filtros Adicionales (Opcional):</h3>
-                <div id="additionalFilters"></div>
-                <button onclick="addAdditionalFilter()" style="margin-top:10px; background:#28a745;">+ Agregar Filtro</button>
-            </div>
-            
-            <div style="margin-top:25px;">
-                <h3 style="font-size:16px; margin-bottom:10px;">Filtrar por Servicio de Ocurrencia:</h3>
+            <div style="margin-top:20px;" id="categoryFiltersSection" style="display:none;">
+                <h3 style="font-size:16px; margin-bottom:10px;">Subcategorías disponibles:</h3>
                 <div style="background:#f8f9fa; padding:15px; border-radius:8px;">
                     <div style="margin-bottom:10px;">
-                        <button onclick="selectAllServices(true)" style="margin-right:10px;">Seleccionar todos</button>
-                        <button onclick="selectAllServices(false)">Deseleccionar todos</button>
+                        <button onclick="selectAllSubcategories(true)" style="margin-right:10px; font-size:12px;">Seleccionar todas</button>
+                        <button onclick="selectAllSubcategories(false)" style="font-size:12px;">Deseleccionar todas</button>
                     </div>
-                    <div id="serviceFilters" style="max-height:200px; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:8px;"></div>
-                </div>
-            </div>
-            
-            <div style="margin-top:25px;">
-                <h3 style="font-size:16px; margin-bottom:10px;">Grupos de Servicios:</h3>
-                <div style="background:#f8f9fa; padding:15px; border-radius:8px;">
-                    <div style="margin-bottom:10px;">
-                        <button onclick="selectAllGroups(true)" style="margin-right:10px;">Seleccionar todos</button>
-                        <button onclick="selectAllGroups(false)">Deseleccionar todos</button>
-                    </div>
-                    <div id="serviceGroups"></div>
-                    <button onclick="createNewServiceGroup()" style="margin-top:10px; background:#667eea;">+ Crear Nuevo Grupo</button>
-                </div>
-            </div>
-            
-            <div style="margin-top:25px;" id="unitFilterSection" style="display:none;">
-                <h3 style="font-size:16px; margin-bottom:10px;">Filtrar por Unidad Notificadora:</h3>
-                <div style="background:#f8f9fa; padding:15px; border-radius:8px;">
-                    <div style="margin-bottom:10px;">
-                        <button onclick="selectAllUnits(true)" style="margin-right:10px;">Seleccionar todas</button>
-                        <button onclick="selectAllUnits(false)">Deseleccionar todas</button>
-                    </div>
-                    <div id="unitFilters" style="max-height:200px; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:8px;"></div>
+                    <div id="subcategoryFilters" style="max-height:250px; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:8px;"></div>
                 </div>
             </div>
             
             <button onclick="generateCrossAnalysis()" style="width:100%; margin-top:15px; background:linear-gradient(135deg, #28a745 0%, #20c997 100%);">🔍 Generar Análisis</button>
-        </div>
 
         <div id="resultsStep" style="display:none;">
             <div class="step">
@@ -805,6 +810,68 @@
             
             uniqueServices = Array.from(services).sort();
         }
+
+function buildServiceBoxes() {
+            const inBox = document.getElementById('servicesInAnalysis');
+            const outBox = document.getElementById('servicesOutAnalysis');
+            
+            inBox.innerHTML = '';
+            outBox.innerHTML = '';
+            
+            uniqueServices.forEach(service => {
+                const serviceBtn = document.createElement('button');
+                serviceBtn.textContent = service;
+                serviceBtn.className = 'service-item';
+                serviceBtn.style.cssText = 'padding:8px; text-align:left; background:white; border:1px solid #ddd; border-radius:5px; cursor:pointer; transition:all 0.2s;';
+                serviceBtn.onmouseover = function() { this.style.background = '#e7f3ff'; };
+                serviceBtn.onmouseout = function() { this.style.background = 'white'; };
+                serviceBtn.onclick = function() { moveService(service, 'toOut'); };
+                inBox.appendChild(serviceBtn);
+            });
+        }
+        
+        function moveService(serviceName, direction) {
+            const inBox = document.getElementById('servicesInAnalysis');
+            const outBox = document.getElementById('servicesOutAnalysis');
+            
+            const allButtons = [...inBox.querySelectorAll('button'), ...outBox.querySelectorAll('button')];
+            const targetBtn = allButtons.find(btn => btn.textContent === serviceName);
+            
+            if (!targetBtn) return;
+            
+            if (direction === 'toOut') {
+                targetBtn.onclick = function() { moveService(serviceName, 'toIn'); };
+                outBox.appendChild(targetBtn);
+            } else {
+                targetBtn.onclick = function() { moveService(serviceName, 'toOut'); };
+                inBox.appendChild(targetBtn);
+            }
+        }
+        
+        function moveAllServices(action) {
+            const inBox = document.getElementById('servicesInAnalysis');
+            const outBox = document.getElementById('servicesOutAnalysis');
+            
+            if (action === 'toOut') {
+                const buttons = Array.from(inBox.querySelectorAll('button'));
+                buttons.forEach(btn => {
+                    const serviceName = btn.textContent;
+                    btn.onclick = function() { moveService(serviceName, 'toIn'); };
+                    outBox.appendChild(btn);
+                });
+            } else if (action === 'toIn') {
+                const buttons = Array.from(outBox.querySelectorAll('button'));
+                buttons.forEach(btn => {
+                    const serviceName = btn.textContent;
+                    btn.onclick = function() { moveService(serviceName, 'toOut'); };
+                    inBox.appendChild(btn);
+                });
+            } else if (action === 'in') {
+                // Do nothing - all are already in by default
+            } else if (action === 'out') {
+                moveAllServices('toOut');
+            }
+        }
         
         function buildAllPeriods() {
                 const periodType = document.getElementById('periodType').value;
@@ -864,8 +931,8 @@
             document.getElementById('sliderEndLabel').textContent = allPeriods[endIdx] || 'Fin';
             
             const count = endIdx - startIdx + 1;
-            document.getElementById('selectedRangeText').textContent = 
-                `${allPeriods[startIdx]} a ${allPeriods[endIdx]} (${count} períodos)`;
+            document.getElementById('selectedRangeText').innerHTML = 
+                `<strong>${allPeriods[startIdx]}</strong> a <strong>${allPeriods[endIdx]}</strong><br><small>(${count} períodos)</small>`;
         }
         
         function toggleCrossYearOptions() {
@@ -923,18 +990,49 @@
                 return;
             }
             
-            buildServiceFilters();
-            renderServiceGroups();
-            buildAdditionalFilterOptions();
-            
-            if (fuzzyMatchResults) {
-                extractUniqueUnits();
-                buildUnitFilters();
-                document.getElementById('unitFilterSection').style.display = 'block';
-            }
+            buildServiceBoxes();
             
             document.getElementById('crossAnalysisStep').style.display = 'block';
             document.getElementById('crossAnalysisStep').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function updateCategoryFilters() {
+            const category = document.getElementById('crossCategory').value;
+            const filtersSection = document.getElementById('categoryFiltersSection');
+            const subcategoryContainer = document.getElementById('subcategoryFilters');
+            
+            if (!category) {
+                filtersSection.style.display = 'none';
+                return;
+            }
+            
+            const colIndex = getCategoryColumnIndex(category);
+            const values = new Set();
+            
+            cleanedData.rows.forEach(row => {
+                const val = row[colIndex];
+                if (val && String(val).trim()) {
+                    values.add(String(val).trim());
+                } else {
+                    values.add('Sin información');
+                }
+            });
+            
+            subcategoryContainer.innerHTML = '';
+            
+            Array.from(values).sort().forEach(val => {
+                const label = document.createElement('label');
+                label.style.cssText = 'display:flex; align-items:center; gap:5px; font-size:13px;';
+                const sanitizedVal = val.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                label.innerHTML = `<input type="checkbox" class="subcategory-filter" value="${sanitizedVal}" checked> ${sanitizedVal}`;
+                subcategoryContainer.appendChild(label);
+            });
+            
+            filtersSection.style.display = 'block';
+        }
+        
+        function selectAllSubcategories(select) {
+            document.querySelectorAll('.subcategory-filter').forEach(cb => cb.checked = select);
         }
         
         function buildServiceFilters() {
@@ -1249,17 +1347,31 @@
                     selectedPeriods = allPeriods.slice(startIdx, endIdx + 1);
                 }
                 
-                const selectedServices = Array.from(document.querySelectorAll('.service-filter:checked')).map(cb => cb.value);
-                const selectedUnits = fuzzyMatchResults ? Array.from(document.querySelectorAll('.unit-filter:checked')).map(cb => cb.value) : [];
+                const inBox = document.getElementById('servicesInAnalysis');
+                const selectedServices = Array.from(inBox.querySelectorAll('button')).map(btn => btn.textContent);
+                
+                if (selectedServices.length === 0) {
+                    hideLoading();
+                    showError('Debes tener al menos un servicio en "En análisis".');
+                    return;
+                }
+                
+                const selectedCategory = document.getElementById('crossCategory').value;
+                if (!selectedCategory) {
+                    hideLoading();
+                    showError('Debes seleccionar una categoría a analizar.');
+                    return;
+                }
+                
+                const selectedSubcategories = Array.from(document.querySelectorAll('.subcategory-filter:checked')).map(cb => cb.value);
                 
                 const additionalFilters = [];
-                document.querySelectorAll('#additionalFilters > div').forEach(filterDiv => {
-                    const category = filterDiv.querySelector('.filter-category').value;
-                    const values = Array.from(filterDiv.querySelector('.filter-value').selectedOptions).map(o => o.value);
-                    if (category && values.length > 0) {
-                        additionalFilters.push({ category, values });
-                    }
-                });
+                if (selectedSubcategories.length > 0) {
+                    additionalFilters.push({ 
+                        category: selectedCategory, 
+                        values: selectedSubcategories 
+                    });
+                }
                 
                 const crossData = performCrossAnalysis({
                     crossCategory,
