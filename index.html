@@ -1343,114 +1343,117 @@
         )}
         
         function displayCrossAnalysisResults(crossData) {
-           const { periodData, serviceGroupData, sortedCategories, selectedPeriods, selectedGroups, config } = crossData;
-            
-            const categoryNames = {
-                'classification': 'Clasificación',
-                'eventDimension': 'Dimensión de evento',
-                'eventType': 'Evento',
-                'vigilanceType': 'Tipo de vigilancia',
-                'consequences': 'Consecuencias en el paciente',
-                'reportingUnit': 'Unidad notificadora'
-            };
-            
-            let tableHtml = `
-                <div class="step collapsible-section">
-                    <h2 onclick="toggleSection('crossAnalysisTable')" style="cursor:pointer;">
-                        <span id="icon-crossAnalysisTable">▼</span> Análisis Cruzado: ${categoryNames[config.crossCategory]}
-                    </h2>
-                    <div id="crossAnalysisTable" class="section-content">
-                        <div class="preview">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Período</th>
-            `;
-            
+    const { periodData, serviceGroupData, sortedCategories, selectedPeriods, selectedGroups, config } = crossData;
+    
+    const categoryNames = {
+        'classification': 'Clasificación',
+        'eventDimension': 'Dimensión de evento',
+        'eventType': 'Evento',
+        'vigilanceType': 'Tipo de vigilancia',
+        'consequences': 'Consecuencias en el paciente',
+        'reportingUnit': 'Unidad notificadora'
+    };
+    
+    let tableHtml = `
+        <div class="step collapsible-section">
+            <h2 onclick="toggleSection('crossAnalysisTable')" style="cursor:pointer;">
+                <span id="icon-crossAnalysisTable">▼</span> Análisis Cruzado: ${categoryNames[config.crossCategory]}
+            </h2>
+            <div id="crossAnalysisTable" class="section-content">
+                <div class="preview">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Período</th>
+    `;
+    
+    sortedCategories.forEach(cat => {
+        const escapedCat = cat.replace(/'/g, "\\'");
+        tableHtml += `<th>${cat}<button class="copy-btn" onclick="copyCrossColumn(event, '${escapedCat}')">copiar</button></th>`;
+    });
+    tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyCrossColumn(event, \'TOTAL\')">copiar</button></th></tr></thead><tbody>';
+    
+    selectedPeriods.forEach(period => {
+        let rowTotal = 0;
+        sortedCategories.forEach(cat => {
+            rowTotal += periodData[period][cat] || 0;
+        });
+        
+        const escapedPeriod = String(period).replace(/'/g, "\\'");
+        tableHtml += `<tr data-cross-row="${escapedPeriod}"><td><strong>${period}</strong><button class="row-copy-btn" onclick="copyCrossRow(event, '${escapedPeriod}')">copiar</button></td>`;
+        sortedCategories.forEach(cat => {
+            tableHtml += `<td data-cross-col="${cat}">${periodData[period][cat] || 0}</td>`;
+        });
+        tableHtml += `<td data-cross-col="TOTAL"><strong>${rowTotal}</strong></td></tr>`;
+        
+        selectedGroups.forEach(group => {
+            let groupTotal = 0;
             sortedCategories.forEach(cat => {
-                tableHtml += `<th>${cat}<button class="copy-btn" onclick="copyCrossColumn(event, '${cat}')">copiar</button></th>`;
+                groupTotal += serviceGroupData[period][group.name][cat] || 0;
             });
-            tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyCrossColumn(event, \'TOTAL\')">copiar</button></th></tr></thead><tbody>';
             
-            selectedPeriods.forEach(period => {
-                let rowTotal = 0;
+            if (groupTotal > 0) {
+                const escapedGroupId = String(period + '_' + group.name).replace(/'/g, "\\'");
+                tableHtml += `<tr style="background:#f8f9fa; font-size:12px;" data-cross-row="${escapedGroupId}">
+                    <td style="padding-left:30px;">└ ${group.name}<button class="row-copy-btn" onclick="copyCrossRow(event, '${escapedGroupId}')">copiar</button></td>`;
                 sortedCategories.forEach(cat => {
-                    rowTotal += periodData[period][cat] || 0;
+                    tableHtml += `<td data-cross-col="${cat}">${serviceGroupData[period][group.name][cat] || 0}</td>`;
                 });
-                
-                tableHtml += `<tr data-cross-row="${period}"><td><strong>${period}</strong><button class="row-copy-btn" onclick="copyCrossRow(event, '${period}')">copiar</button></td>`;
-                sortedCategories.forEach(cat => {
-                    tableHtml += `<td data-cross-col="${cat}">${periodData[period][cat] || 0}</td>`;
-                });
-                tableHtml += `<td data-cross-col="TOTAL"><strong>${rowTotal}</strong></td></tr>`;
-                
-                selectedGroups.forEach(group => {
-                    let groupTotal = 0;
-                    sortedCategories.forEach(cat => {
-                        groupTotal += serviceGroupData[period][group.name][cat] || 0;
-                    });
-                    
-                    if (groupTotal > 0) {
-                        tableHtml += `<tr style="background:#f8f9fa; font-size:12px;" data-cross-row="${period}_${group.name}">
-                            <td style="padding-left:30px;">└ ${group.name}<button class="row-copy-btn" onclick="copyCrossRow(event, '${period}_${group.name}')">copiar</button></td>`;
-                        sortedCategories.forEach(cat => {
-                            tableHtml += `<td data-cross-col="${cat}">${serviceGroupData[period][group.name][cat] || 0}</td>`;
-                        });
-                        tableHtml += `<td data-cross-col="TOTAL">${groupTotal}</td></tr>`;
-                    }
-                });
-            });
-            
-            const columnTotals = {};
-            let grandTotal = 0;
-            sortedCategories.forEach(cat => {
-                columnTotals[cat] = 0;
-                selectedPeriods.forEach(period => {
-                    columnTotals[cat] += periodData[period][cat] || 0;
-                });
-                grandTotal += columnTotals[cat];
-            });
-            
-            tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;" data-cross-row="TOTAL"><td>TOTAL<button class="row-copy-btn" onclick="copyCrossRow(event, \'TOTAL\')">copiar</button></td>';
-            sortedCategories.forEach(cat => {
-                tableHtml += `<td data-cross-col="${cat}">${columnTotals[cat]}</td>`;
-            });
-            tableHtml += `<td data-cross-col="TOTAL">${grandTotal}</td></tr>`;
-            
-            tableHtml += `
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                tableHtml += `<td data-cross-col="TOTAL">${groupTotal}</td></tr>`;
+            }
+        });
+    });
+    
+    const columnTotals = {};
+    let grandTotal = 0;
+    sortedCategories.forEach(cat => {
+        columnTotals[cat] = 0;
+        selectedPeriods.forEach(period => {
+            columnTotals[cat] += periodData[period][cat] || 0;
+        });
+        grandTotal += columnTotals[cat];
+    });
+    
+    tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;" data-cross-row="TOTAL"><td>TOTAL<button class="row-copy-btn" onclick="copyCrossRow(event, \'TOTAL\')">copiar</button></td>';
+    sortedCategories.forEach(cat => {
+        tableHtml += `<td data-cross-col="${cat}">${columnTotals[cat]}</td>`;
+    });
+    tableHtml += `<td data-cross-col="TOTAL">${grandTotal}</td></tr>`;
+    
+    tableHtml += `
+                    </tbody>
+                </table>
             </div>
-            `;
-            
-            document.getElementById('resultsStep').style.display = 'block';
-            document.getElementById('previewContainer').innerHTML = tableHtml;
-            
-            analysisResults = {
-                crossData: crossData,
-                type: 'cross'
-            };
-            
-            const statsHtml = `
-                <div class="stat-card">
-                    <div class="stat-value">${grandTotal}</div>
-                    <div class="stat-label">Total Eventos</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${selectedPeriods.length}</div>
-                    <div class="stat-label">Períodos Analizados</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${sortedCategories.length}</div>
-                    <div class="stat-label">Categorías Encontradas</div>
-                </div>
-            `;
-            document.getElementById('statsContainer').innerHTML = statsHtml;
-            
-            document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
-        }
+        </div>
+    </div>
+    `;
+    
+    document.getElementById('resultsStep').style.display = 'block';
+    document.getElementById('previewContainer').innerHTML = tableHtml;
+    
+    analysisResults = {
+        crossData: crossData,
+        type: 'cross'
+    };
+    
+    const statsHtml = `
+        <div class="stat-card">
+            <div class="stat-value">${grandTotal}</div>
+            <div class="stat-label">Total Eventos</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${selectedPeriods.length}</div>
+            <div class="stat-label">Períodos Analizados</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${sortedCategories.length}</div>
+            <div class="stat-label">Categorías Encontradas</div>
+        </div>
+    `;
+    document.getElementById('statsContainer').innerHTML = statsHtml;
+    
+    document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
+}
         
         function copyCrossColumn(event, columnName) {
             event.stopPropagation();
