@@ -1016,6 +1016,19 @@
         checkbox.value = group.id;
         checkbox.checked = true; // Selected by default
         checkbox.id = 'group_' + group.id;
+
+
+        // Cuando se hace clic en el grupo, seleccionar/deseleccionar sus servicios
+        checkbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            group.services.forEach(serviceName => {
+                const serviceCheckbox = document.querySelector(`.service-filter[value="${serviceName}"]`);
+                if (serviceCheckbox) {
+                    serviceCheckbox.checked = isChecked;
+                }
+            });
+        });
+
         
         const title = document.createElement('label');
         title.htmlFor = 'group_' + group.id;
@@ -1398,24 +1411,7 @@ return {
         sortedCategories.forEach(cat => {
             tableHtml += `<td data-cross-col="${cat}">${periodData[period][cat] || 0}</td>`;
         });
-        tableHtml += `<td data-cross-col="TOTAL"><strong>${rowTotal}</strong></td></tr>`;
-        
-        selectedGroups.forEach(group => {
-            let groupTotal = 0;
-            sortedCategories.forEach(cat => {
-                groupTotal += serviceGroupData[period][group.name][cat] || 0;
-            });
-            
-            if (groupTotal > 0) {
-                const escapedGroupId = String(period + '_' + group.name).replace(/'/g, "\\'");
-                tableHtml += `<tr style="background:#f8f9fa; font-size:12px;" data-cross-row="${escapedGroupId}">
-                    <td style="padding-left:30px;">└ ${group.name}<button class="row-copy-btn" onclick="copyCrossRow(event, '${escapedGroupId}')">copiar</button></td>`;
-                sortedCategories.forEach(cat => {
-                    tableHtml += `<td data-cross-col="${cat}">${serviceGroupData[period][group.name][cat] || 0}</td>`;
-                });
-                tableHtml += `<td data-cross-col="TOTAL">${groupTotal}</td></tr>`;
-            }
-        });
+        tableHtml += `<td data-cross-col="TOTAL"><strong>${rowTotal}</strong></td></tr>`;              
     });
     
     const columnTotals = {};
