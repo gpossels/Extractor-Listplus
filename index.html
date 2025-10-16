@@ -1260,10 +1260,20 @@
             const serviceGroupData = {};
             
             // Get selected groups
-            const selectedGroupIds = Array.from(document.querySelectorAll('.group-checkbox:checked')).map(cb => cb.value);
-            const selectedGroups = serviceGroups.filter(g => selectedGroupIds.includes(g.id));
-            
-            selectedPeriods.forEach(period => {
+const selectedGroupIds = Array.from(document.querySelectorAll('.group-checkbox:checked')).map(cb => cb.value);
+const selectedGroups = serviceGroups.filter(g => selectedGroupIds.includes(g.id));
+
+// Si hay grupos seleccionados, usar SOLO los servicios de esos grupos
+let effectiveServices = selectedServices;
+if (selectedGroups.length > 0) {
+    const groupServices = new Set();
+    selectedGroups.forEach(group => {
+        group.services.forEach(s => groupServices.add(s));
+    });
+    effectiveServices = selectedServices.filter(s => groupServices.has(s));
+}
+
+selectedPeriods.forEach(period => {
     periodData[period] = {};
     serviceGroupData[period] = {};
     selectedGroups.forEach(group => {
@@ -1279,7 +1289,7 @@
                 if (!selectedPeriods.includes(period)) return;
                 
                 const service = String(row[serviceCol] || '').trim();
-                if (!selectedServices.includes(service)) return;
+if (!effectiveServices.includes(service)) return;
                 
                 if (fuzzyMatchResults && selectedUnits.length > 0) {
                     const reporter = String(row[fuzzyMatchResults.reporterIdx] || '').trim();
