@@ -801,13 +801,19 @@
         }
         
         function buildAllPeriods() {
-            const periodType = document.getElementById('periodType').value;
-            const dateType = document.querySelector('input[name="dateType"]:checked').value;
-            const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
-            
-            const periods = new Set();
-            
-            cleanedData.rows.forEach(row => {
+                const periodType = document.getElementById('periodType').value;
+                const dateType = document.querySelector('input[name="dateType"]:checked').value;
+                const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
+                
+                const periods = new Set();
+                
+                // Validar que haya datos antes de procesar
+                if (!cleanedData || !cleanedData.rows || cleanedData.rows.length === 0) {
+                    allPeriods = [];
+                    return;
+            }
+    
+    cleanedData.rows.forEach(row => {
                 const dateStr = row[dateColIndex];
                 const date = parseDate(dateStr);
                 if (date) {
@@ -938,11 +944,19 @@
         }
         
         function extractUniqueUnits() {
-            if (!fuzzyMatchResults) return;
-            
-            const units = new Set();
-            Object.values(fuzzyMatchResults.reporterToUnit).forEach(match => {
-                if (match.unit && match.unit !== 'Sin match') {
+    if (!fuzzyMatchResults || !fuzzyMatchResults.reporterToUnit) return;
+    
+    const units = new Set();
+    const reporterToUnitValues = Object.values(fuzzyMatchResults.reporterToUnit);
+    
+    // Validar que haya datos antes de procesar
+    if (reporterToUnitValues.length === 0) {
+        uniqueUnits = [];
+        return;
+    }
+    
+    reporterToUnitValues.forEach(match => {
+        if (match && match.unit && match.unit !== 'Sin match') {
                     units.add(match.unit);
                 }
             });
@@ -976,6 +990,13 @@
         
         function renderServiceGroups() {
     const container = document.getElementById('serviceGroups');
+    
+    // Limpiar event listeners anteriores antes de eliminar el contenido
+    const oldButtons = container.querySelectorAll('button');
+    oldButtons.forEach(btn => {
+        btn.onclick = null;
+    });
+    
     container.innerHTML = '';
     
     serviceGroups.forEach(group => {
@@ -1243,12 +1264,12 @@
             const selectedGroups = serviceGroups.filter(g => selectedGroupIds.includes(g.id));
             
             selectedPeriods.forEach(period => {
-                periodData[period] = {};
-                selectedGroups.forEach(group => {
-                    serviceGroupData[period] = serviceGroupData[period] || {};
-                    serviceGroupData[period][group.name] = {};
-                });
-            });
+    periodData[period] = {};
+    serviceGroupData[period] = {};
+    selectedGroups.forEach(group => {
+        serviceGroupData[period][group.name] = {};
+    });
+});
             
             cleanedData.rows.forEach(row => {
                 const dateStr = row[dateColIndex];
@@ -1575,12 +1596,16 @@ function performFuzzyMatching() {
                 });
 
                 const uniqueReporters = [...new Set(cleanedData.rows.map(row => String(row[reporterIdx] || '').trim()).filter(r => r))];
-                
+
                 const reporterToUnit = {};
                 const namesArray = Object.keys(nameToUnit);
                 let processed = 0;
+                let isProcessing = false;
                 
                 function processBatch(startIdx) {
+                    if (isProcessing) return; // Prevenir ejecución múltiple
+                    isProcessing = true;
+                    
                     const batchSize = 50;
                     const endIdx = Math.min(startIdx + batchSize, uniqueReporters.length);
                     
@@ -1633,6 +1658,7 @@ function performFuzzyMatching() {
                     }
 
                     if (endIdx < uniqueReporters.length) {
+                        isProcessing = false; // Liberar antes de la siguiente llamada
                         setTimeout(() => processBatch(endIdx), 0);
                     } else {
                         finishMatching();
@@ -1655,6 +1681,7 @@ function performFuzzyMatching() {
                     
                     info.innerHTML += `<br><strong>Fuzzy Matching completado:</strong><br>• Reporteros únicos: ${totalReporters}<br>• Matches exitosos: ${matchedCount}<br>• En unidades seleccionadas: ${matchedInDefaultUnits}<br>• Sin match: ${totalReporters - matchedCount}`;
 
+                    isProcessing = false; // Liberar el flag
                     setTimeout(() => hideLoading(), 100);
                 }
                 
@@ -1666,11 +1693,16 @@ function performFuzzyMatching() {
             }
         }
 
-function calculateSimilarity(str1, str2) {
+        function calculateSimilarity(str1, str2) {
+            // Validar que ambos strings sean válidos
+            if (!str1 || !str2 || typeof str1 !== 'string' || typeof str2 !== 'string') {
+                return 0;
+            }
+            
             if (str1.length > 100 || str2.length > 100) return 0;
             
-            const longer = str1.length > str2.length ? str1 : str2;
-            const shorter = str1.length > str2.length ? str2 : str1;
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
             
             if (longer.length === 0) return 1.0;
             if (str1 === str2) return 1.0;
@@ -1725,7 +1757,11 @@ function parseDate(dateStr) {
                 const year = parseInt(match[3]);
                 
                 if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
-                    return new Date(year, month, day);
+                    const date = new Date(year, month, day);
+                    // Validar que la fecha sea válida (evita 31 de febrero, etc.)
+                    if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+                        return date;
+                    }
                 }
             }
             
