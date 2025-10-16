@@ -1313,20 +1313,15 @@
                 }
                 periodData[period][categoryValue]++;
                 
-                cleanedData.rows.forEach(row => {
-    // ... todo el código de procesamiento ...
-    
-    selectedGroups.forEach(group => {
-        if (group.services.includes(service)) {
-            if (!serviceGroupData[period][group.name][categoryValue]) {
-                serviceGroupData[period][group.name][categoryValue] = 0;
-            }
-            serviceGroupData[period][group.name][categoryValue]++;
+                selectedGroups.forEach(group => {
+    if (group.services.includes(service)) {
+        if (!serviceGroupData[period][group.name][categoryValue]) {
+            serviceGroupData[period][group.name][categoryValue] = 0;
         }
-    });
-});  // ✅ CERRAR EL forEach AQUÍ
-
-// ✅ TODO ESTO VA FUERA DEL forEach
+        serviceGroupData[period][group.name][categoryValue]++;
+    }
+});
+});
 const sortedCategories = Array.from(categoryValues).sort();
 
 selectedPeriods.forEach(period => {
