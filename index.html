@@ -484,22 +484,28 @@
             
             <h2 style="margin-top:30px;">Paso 4: Configurar Análisis Cruzado</h2>
             
-            <div class="controls">
-                <div class="control-group">
-                    <label>Categoría a Analizar (Columnas):</label>
-                    <select id="crossCategory" onchange="updateCategoryFilters()">
-                        <option value="">Seleccionar categoría...</option>
-                        <option value="classification">Clasificación</option>
-                        <option value="eventDimension">Dimensión de evento</option>
-                        <option value="eventType">Evento</option>
-                        <option value="vigilanceType">Tipo de vigilancia</option>
-                        <option value="consequences">Consecuencias en el paciente</option>
-                        <option value="reportingUnit">Unidad notificadora</option>
-                    </select>
+            <div style="margin-bottom:30px;">
+                <div style="display:grid; grid-template-columns:1fr 100px 1fr; gap:20px; align-items:start;">
+                    <div style="border:2px solid #dc3545; border-radius:8px; padding:15px; background:#fff0f0;">
+                        <h3 style="margin:0 0 15px 0; color:#dc3545; font-size:16px;">Categorías disponibles</h3>
+                        <div id="categoriesOutAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex; flex-direction:column; justify-content:center; gap:10px;">
+                        <button onclick="selectCategory()" style="padding:8px; font-size:20px;" title="Seleccionar categoría">→</button>
+                    </div>
+                    
+                    <div style="border:2px solid #667eea; border-radius:8px; padding:15px; background:#f8f9fa;">
+                        <h3 style="margin:0 0 15px 0; color:#667eea; font-size:16px;">Categoría seleccionada</h3>
+                        <div id="categoryInAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
+                            <p style="color:#999; font-size:13px; margin:0;">Selecciona una categoría</p>
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <div style="margin-top:20px;" id="categoryFiltersSection" style="display:none;">
+            <div style="margin-top:20px;" id="subcategorySection" style="display:none;">
                 <h3 style="font-size:16px; margin-bottom:10px;">Subcategorías disponibles:</h3>
                 <div style="background:#f8f9fa; padding:15px; border-radius:8px;">
                     <div style="margin-bottom:10px;">
@@ -511,7 +517,32 @@
             </div>
             
             <button onclick="generateCrossAnalysis()" style="width:100%; margin-top:15px; background:linear-gradient(135deg, #28a745 0%, #20c997 100%);">🔍 Generar Análisis</button>
+        </div>
+        
+        <div class="step" id="denominatorsStep" style="display:none;">
+            <h2 onclick="toggleSection('denominatorsContent')" style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+                <span id="icon-denominatorsContent">▼</span> Paso 5: Denominadores y Tasas
+            </h2>
+            <div id="denominatorsContent" class="section-content">
+                <div style="background:#fff3cd; padding:15px; margin-bottom:20px; border-radius:8px; border-left:4px solid #ffc107;">
+                    <strong>ℹ️ Información:</strong> Asigna denominadores a cada categoría para calcular tasas automáticamente.
+                </div>
+                
+                <div style="margin-bottom:20px;">
+                    <label style="font-weight:600; margin-bottom:10px; display:block;">Factor de amplificación (por defecto: 1000)</label>
+                    <input type="number" id="amplificationFactor" value="1000" min="1" style="padding:8px; border:1px solid #ddd; border-radius:5px; width:150px;">
+                </div>
+                
+                <div id="denominatorMappings" style="display:grid; gap:15px;">
+                    <!-- Denominator mappings will be inserted here -->
+                </div>
+                
+                <button onclick="applyDenominatorsAndGenerate()" style="width:100%; margin-top:20px; background:linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                    📊 Generar Análisis con Tasas
+                </button>
             </div>
+        </div>
+        
         <div id="resultsStep" style="display:none;">
             <div class="step">
                 <h2>Resultados del Análisis</h2>
@@ -945,21 +976,86 @@ function buildServiceBoxes() {
             }
             
             buildServiceBoxes();
+            buildCategoryBoxes();
             
             document.getElementById('crossAnalysisStep').style.display = 'block';
             document.getElementById('crossAnalysisStep').scrollIntoView({ behavior: 'smooth' });
         }
         
-        function updateCategoryFilters() {
-            const category = document.getElementById('crossCategory').value;
-            const filtersSection = document.getElementById('categoryFiltersSection');
-            const subcategoryContainer = document.getElementById('subcategoryFilters');
+        function buildCategoryBoxes() {
+            const outBox = document.getElementById('categoriesOutAnalysis');
+            outBox.innerHTML = '';
             
-            if (!category) {
-                filtersSection.style.display = 'none';
-                return;
+            const categories = [
+                { value: 'classification', label: 'Clasificación' },
+                { value: 'eventDimension', label: 'Dimensión de evento' },
+                { value: 'eventType', label: 'Evento' },
+                { value: 'vigilanceType', label: 'Tipo de vigilancia' },
+                { value: 'consequences', label: 'Consecuencias en el paciente' },
+                { value: 'reportingUnit', label: 'Unidad notificadora' }
+            ];
+            
+            categories.forEach(cat => {
+                const catBtn = document.createElement('button');
+                catBtn.textContent = cat.label;
+                catBtn.className = 'category-item';
+                catBtn.dataset.value = cat.value;
+                catBtn.style.cssText = 'padding:8px; text-align:left; background:white; border:1px solid #ddd; border-radius:5px; cursor:pointer; transition:all 0.2s; color:#333;';
+                catBtn.onmouseover = function() { this.style.background = '#ffe7e7'; };
+                catBtn.onmouseout = function() { this.style.background = 'white'; };
+                catBtn.onclick = function() { moveCategory(cat.value, cat.label); };
+                outBox.appendChild(catBtn);
+            });
+        }
+        
+        function moveCategory(value, label) {
+            const inBox = document.getElementById('categoryInAnalysis');
+            const outBox = document.getElementById('categoriesOutAnalysis');
+            
+            // Clear previous selection
+            inBox.innerHTML = '';
+            
+            // Reset all buttons to outBox
+            const allButtons = Array.from(outBox.querySelectorAll('button'));
+            allButtons.forEach(btn => {
+                btn.style.background = 'white';
+            });
+            
+            // Move selected to inBox
+            const selectedBtn = document.createElement('button');
+            selectedBtn.textContent = label;
+            selectedBtn.className = 'category-item';
+            selectedBtn.dataset.value = value;
+            selectedBtn.style.cssText = 'padding:8px; text-align:left; background:white; border:1px solid #667eea; border-radius:5px; cursor:pointer; transition:all 0.2s; color:#333;';
+            selectedBtn.onmouseover = function() { this.style.background = '#e7f3ff'; };
+            selectedBtn.onmouseout = function() { this.style.background = 'white'; };
+            selectedBtn.onclick = function() { clearCategory(); };
+            inBox.appendChild(selectedBtn);
+            
+            // Load subcategories
+            loadSubcategories(value);
+        }
+        
+        function selectCategory() {
+            // Find which button is currently selected in the left box
+            const outBox = document.getElementById('categoriesOutAnalysis');
+            const buttons = outBox.querySelectorAll('button');
+            
+            // For now, just show a message if none selected
+            if (buttons.length > 0) {
+                alert('Haz clic directamente en una categoría para seleccionarla');
             }
+        }
+        
+        function clearCategory() {
+            const inBox = document.getElementById('categoryInAnalysis');
+            inBox.innerHTML = '<p style="color:#999; font-size:13px; margin:0;">Selecciona una categoría</p>';
             
+            // Hide subcategories
+            document.getElementById('subcategorySection').style.display = 'none';
+        }
+        
+        function loadSubcategories(category) {
             const colIndex = getCategoryColumnIndex(category);
             const values = new Set();
             
@@ -972,6 +1068,7 @@ function buildServiceBoxes() {
                 }
             });
             
+            const subcategoryContainer = document.getElementById('subcategoryFilters');
             subcategoryContainer.innerHTML = '';
             
             Array.from(values).sort().forEach(val => {
@@ -982,7 +1079,7 @@ function buildServiceBoxes() {
                 subcategoryContainer.appendChild(label);
             });
             
-            filtersSection.style.display = 'block';
+            document.getElementById('subcategorySection').style.display = 'block';
         }
         
         function selectAllSubcategories(select) {
@@ -1048,12 +1145,15 @@ function buildServiceBoxes() {
                     return;
                 }
                 
-                const selectedCategory = document.getElementById('crossCategory').value;
-                if (!selectedCategory) {
+                // Get selected category from the box
+                const categoryInBox = document.getElementById('categoryInAnalysis');
+                const categoryBtn = categoryInBox.querySelector('button');
+                if (!categoryBtn) {
                     hideLoading();
                     showError('Debes seleccionar una categoría a analizar.');
                     return;
                 }
+                const selectedCategory = categoryBtn.dataset.value;
                 
                 const selectedSubcategories = Array.from(document.querySelectorAll('.subcategory-filter:checked')).map(cb => cb.value);
                 
@@ -1061,6 +1161,128 @@ function buildServiceBoxes() {
                 if (selectedSubcategories.length > 0) {
                     additionalFilters.push({ 
                         category: selectedCategory, 
+                        values: selectedSubcategories 
+                    });
+                }
+                
+                // Check if denominators are loaded
+                if (denominatorsData) {
+                    // Show Paso 5 for denominator configuration
+                    buildDenominatorMappings(selectedCategory);
+                    document.getElementById('denominatorsStep').style.display = 'block';
+                    document.getElementById('denominatorsStep').scrollIntoView({ behavior: 'smooth' });
+                    hideLoading();
+                } else {
+                    // No denominators, generate analysis directly
+                    const crossData = performCrossAnalysis({
+                        crossCategory,
+                        periodType,
+                        dateType,
+                        selectedPeriods,
+                        selectedServices,
+                        selectedUnits: [],
+                        additionalFilters
+                    });
+                    
+                    displayCrossAnalysisResults(crossData);
+                    hideLoading();
+                }
+                
+            } catch (error) {
+                hideLoading();
+                showError(`Error al generar análisis cruzado: ${error.message}`);
+            }
+        }
+
+        function buildDenominatorMappings(selectedCategory) {
+            const container = document.getElementById('denominatorMappings');
+            container.innerHTML = '';
+            
+            // Get the selected subcategories
+            const selectedSubcategories = Array.from(document.querySelectorAll('.subcategory-filter:checked')).map(cb => cb.value);
+            
+            // Get available denominator columns (all columns except "Fecha")
+            const denominatorColumns = denominatorsData.headers
+                .map((h, idx) => ({ header: h, index: idx }))
+                .filter(col => col.index !== denominatorsData.fechaIdx);
+            
+            // Create a mapping UI for each subcategory
+            selectedSubcategories.forEach(subcat => {
+                const mapDiv = document.createElement('div');
+                mapDiv.style.cssText = 'display:grid; grid-template-columns:1fr 1fr; gap:15px; padding:15px; background:#f8f9fa; border-radius:8px; align-items:center;';
+                
+                const label = document.createElement('div');
+                label.style.cssText = 'font-weight:600; color:#333;';
+                label.textContent = subcat;
+                
+                const select = document.createElement('select');
+                select.className = 'denominator-select';
+                select.dataset.subcategory = subcat;
+                select.style.cssText = 'padding:8px; border:1px solid #ddd; border-radius:5px;';
+                
+                // Add options
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Sin denominador';
+                select.appendChild(defaultOption);
+                
+                denominatorColumns.forEach(col => {
+                    const option = document.createElement('option');
+                    option.value = col.index;
+                    option.textContent = col.header;
+                    select.appendChild(option);
+                });
+                
+                mapDiv.appendChild(label);
+                mapDiv.appendChild(select);
+                container.appendChild(mapDiv);
+            });
+        }
+        
+        function applyDenominatorsAndGenerate() {
+            try {
+                showLoading('Generando análisis con tasas...');
+                
+                // Collect denominator mappings
+                const denominatorMappings = {};
+                document.querySelectorAll('.denominator-select').forEach(select => {
+                    const subcat = select.dataset.subcategory;
+                    const denomIdx = select.value;
+                    if (denomIdx !== '') {
+                        denominatorMappings[subcat] = parseInt(denomIdx);
+                    }
+                });
+                
+                const amplificationFactor = parseInt(document.getElementById('amplificationFactor').value) || 1000;
+                
+                // Get analysis configuration from previous step
+                const crossCategory = document.getElementById('categoryInAnalysis').querySelector('button')?.dataset.value;
+                const periodType = document.getElementById('periodType').value;
+                const dateType = document.querySelector('input[name="dateType"]:checked').value;
+                const crossYearEnabled = document.getElementById('crossYearComparison').checked;
+                
+                let selectedPeriods = [];
+                if (crossYearEnabled) {
+                    const selectedPeriod = document.getElementById('crossYearPeriod').value;
+                    const selectedYears = Array.from(document.querySelectorAll('#yearCheckboxes input:checked')).map(cb => cb.value);
+                    selectedPeriods = allPeriods.filter(p => {
+                        const parts = p.split('-');
+                        return parts.length > 1 && parts[1] === selectedPeriod && selectedYears.includes(parts[0]);
+                    });
+                } else {
+                    const startIdx = parseInt(document.getElementById('periodSliderStart').value);
+                    const endIdx = parseInt(document.getElementById('periodSliderEnd').value);
+                    selectedPeriods = allPeriods.slice(startIdx, endIdx + 1);
+                }
+                
+                const inBox = document.getElementById('servicesInAnalysis');
+                const selectedServices = Array.from(inBox.querySelectorAll('button')).map(btn => btn.textContent);
+                
+                const selectedSubcategories = Array.from(document.querySelectorAll('.subcategory-filter:checked')).map(cb => cb.value);
+                const additionalFilters = [];
+                if (selectedSubcategories.length > 0) {
+                    additionalFilters.push({ 
+                        category: crossCategory, 
                         values: selectedSubcategories 
                     });
                 }
@@ -1075,12 +1297,16 @@ function buildServiceBoxes() {
                     additionalFilters
                 });
                 
+                // Add denominator info to crossData
+                crossData.denominatorMappings = denominatorMappings;
+                crossData.amplificationFactor = amplificationFactor;
+                
                 displayCrossAnalysisResults(crossData);
                 hideLoading();
                 
             } catch (error) {
                 hideLoading();
-                showError(`Error al generar análisis cruzado: ${error.message}`);
+                showError(`Error al generar análisis con tasas: ${error.message}`);
             }
         }
         
@@ -1187,14 +1413,20 @@ return {
                                 <th>Período</th>
     `;
     
+    const hasDenominators = crossData.denominatorMappings && Object.keys(crossData.denominatorMappings).length > 0;
+    
     sortedCategories.forEach(cat => {
         const escapedCat = cat.replace(/'/g, "\\'");
         const sanitizedCat = cat.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         tableHtml += `<th>${sanitizedCat}<button class="copy-btn" onclick="copyCrossColumn(event, '${escapedCat}')">copiar</button></th>`;
+        
+        if (hasDenominators && crossData.denominatorMappings[cat]) {
+            tableHtml += `<th>Tasa ${sanitizedCat}<button class="copy-btn" onclick="copyCrossColumn(event, 'Tasa ${escapedCat}')">copiar</button></th>`;
+        }
     });
-    tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyCrossColumn(event, \'TOTAL\')">copiar</button></th></tr></thead><tbody>';
+    tableHtml += '<th>TOTAL<button class="copy-btn" onclick="copyCrossColumn(event, \'TOTAL\')">copiar</button></th></tr></thead><tbody>';    
     
-    selectedPeriods.forEach(period => {
+        selectedPeriods.forEach(period => {
         let rowTotal = 0;
         sortedCategories.forEach(cat => {
             rowTotal += periodData[period][cat] || 0;
@@ -1203,9 +1435,23 @@ return {
         const escapedPeriod = String(period).replace(/'/g, "\\'");
         const sanitizedPeriod = String(period).replace(/</g, '&lt;').replace(/>/g, '&gt;');
         tableHtml += `<tr data-cross-row="${escapedPeriod}"><td><strong>${sanitizedPeriod}</strong><button class="row-copy-btn" onclick="copyCrossRow(event, '${escapedPeriod}')">copiar</button></td>`;
+        
         sortedCategories.forEach(cat => {
-            tableHtml += `<td data-cross-col="${cat}">${periodData[period][cat] || 0}</td>`;
+            const count = periodData[period][cat] || 0;
+            tableHtml += `<td data-cross-col="${cat}">${count}</td>`;
+            
+            // Add rate column if denominator is configured
+            if (hasDenominators && crossData.denominatorMappings[cat]) {
+                const denomValue = getDenominatorForPeriod(period, crossData.denominatorMappings[cat]);
+                if (denomValue > 0) {
+                    const rate = ((count / denomValue) * crossData.amplificationFactor).toFixed(2);
+                    tableHtml += `<td data-cross-col="Tasa ${cat}">${rate}</td>`;
+                } else {
+                    tableHtml += `<td data-cross-col="Tasa ${cat}">-</td>`;
+                }
+            }
         });
+        
         tableHtml += `<td data-cross-col="TOTAL"><strong>${rowTotal}</strong></td></tr>`;              
     });
     
@@ -1220,11 +1466,33 @@ return {
     });
     
     tableHtml += '<tr style="background:#f0f0f0;font-weight:bold;" data-cross-row="TOTAL"><td>TOTAL<button class="row-copy-btn" onclick="copyCrossRow(event, \'TOTAL\')">copiar</button></td>';
+    
     sortedCategories.forEach(cat => {
         tableHtml += `<td data-cross-col="${cat}">${columnTotals[cat]}</td>`;
+        
+        // Add average rate for this category if denominator is configured
+        if (hasDenominators && crossData.denominatorMappings[cat]) {
+            let totalDenom = 0;
+            let countPeriods = 0;
+            
+            selectedPeriods.forEach(period => {
+                const denomValue = getDenominatorForPeriod(period, crossData.denominatorMappings[cat]);
+                if (denomValue > 0) {
+                    totalDenom += denomValue;
+                    countPeriods++;
+                }
+            });
+            
+            if (totalDenom > 0) {
+                const avgRate = ((columnTotals[cat] / totalDenom) * crossData.amplificationFactor).toFixed(2);
+                tableHtml += `<td data-cross-col="Tasa ${cat}">${avgRate}</td>`;
+            } else {
+                tableHtml += `<td data-cross-col="Tasa ${cat}">-</td>`;
+            }
+        }
     });
-    tableHtml += `<td data-cross-col="TOTAL">${grandTotal}</td></tr>`;
     
+    tableHtml += `<td data-cross-col="TOTAL">${grandTotal}</td></tr>`;    
     tableHtml += `
                     </tbody>
                 </table>
@@ -1259,6 +1527,30 @@ return {
     
     document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
 }
+
+    function getDenominatorForPeriod(period, denominatorColumnIndex) {
+            if (!denominatorsData) return 0;
+            
+            // Find matching row in denominators data
+            for (let row of denominatorsData.rows) {
+                const fechaValue = row[denominatorsData.fechaIdx];
+                if (!fechaValue) continue;
+                
+                // Parse the fecha and convert to same format as period
+                const date = parseDate(fechaValue);
+                if (!date) continue;
+                
+                const periodType = document.getElementById('periodType').value;
+                const rowPeriod = getPeriodKey(date, periodType);
+                
+                if (rowPeriod === period) {
+                    const denomValue = parseFloat(row[denominatorColumnIndex]);
+                    return isNaN(denomValue) ? 0 : denomValue;
+                }
+            }
+            
+            return 0;
+        }
         
         function copyCrossColumn(event, columnName) {
             event.stopPropagation();
@@ -1510,26 +1802,52 @@ function downloadExcel() {
                 
                 if (analysisResults.type === 'cross') {
                     const { crossData } = analysisResults;
-                    const { periodData, sortedCategories, selectedPeriods, config } = crossData;
+                    const { periodData, sortedCategories, selectedPeriods, config, denominatorMappings, amplificationFactor } = crossData;
                     
-                    let wsData = [['Período', ...sortedCategories, 'TOTAL']];
+                    const hasDenominators = denominatorMappings && Object.keys(denominatorMappings).length > 0;
                     
+                    // Build header row
+                    const headerRow = ['Período'];
+                    sortedCategories.forEach(cat => {
+                        headerRow.push(cat);
+                        if (hasDenominators && denominatorMappings[cat]) {
+                            headerRow.push(`Tasa ${cat}`);
+                        }
+                    });
+                    headerRow.push('TOTAL');
+                    
+                    let wsData = [headerRow];
+                    
+                    // Build data rows
                     selectedPeriods.forEach(period => {
                         let rowTotal = 0;
                         const row = [period];
+                        
                         sortedCategories.forEach(cat => {
-                            const val = periodData[period][cat] || 0;
-                            row.push(val);
-                            rowTotal += val;
+                            const count = periodData[period][cat] || 0;
+                            row.push(count);
+                            rowTotal += count;
+                            
+                            // Add rate if denominator configured
+                            if (hasDenominators && denominatorMappings[cat]) {
+                                const denomValue = getDenominatorForPeriod(period, denominatorMappings[cat]);
+                                if (denomValue > 0) {
+                                    const rate = ((count / denomValue) * amplificationFactor).toFixed(2);
+                                    row.push(parseFloat(rate));
+                                } else {
+                                    row.push('-');
+                                }
+                            }
                         });
+                        
                         row.push(rowTotal);
                         wsData.push(row);
-                        
-                        
                     });
                     
+                    // Build total row
                     const totalRow = ['TOTAL'];
                     let grandTotal = 0;
+                    
                     sortedCategories.forEach(cat => {
                         let colTotal = 0;
                         selectedPeriods.forEach(period => {
@@ -1537,7 +1855,26 @@ function downloadExcel() {
                         });
                         totalRow.push(colTotal);
                         grandTotal += colTotal;
+                        
+                        // Add average rate if denominator configured
+                        if (hasDenominators && denominatorMappings[cat]) {
+                            let totalDenom = 0;
+                            selectedPeriods.forEach(period => {
+                                const denomValue = getDenominatorForPeriod(period, denominatorMappings[cat]);
+                                if (denomValue > 0) {
+                                    totalDenom += denomValue;
+                                }
+                            });
+                            
+                            if (totalDenom > 0) {
+                                const avgRate = ((colTotal / totalDenom) * amplificationFactor).toFixed(2);
+                                totalRow.push(parseFloat(avgRate));
+                            } else {
+                                totalRow.push('-');
+                            }
+                        }
                     });
+                    
                     totalRow.push(grandTotal);
                     wsData.push(totalRow);
                     
