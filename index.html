@@ -484,35 +484,38 @@
             
             <h2 style="margin-top:30px;">Paso 4: Configurar Análisis Cruzado</h2>
             
-            <div style="margin-bottom:30px;">
+            <div class="control-group" style="margin-bottom:20px;">
+                <label>Categoría a Analizar (Columnas):</label>
+                <select id="crossCategory" onchange="loadSubcategoryBoxes()">
+                    <option value="">Seleccionar categoría...</option>
+                    <option value="classification">Clasificación</option>
+                    <option value="eventDimension">Dimensión de evento</option>
+                    <option value="eventType">Evento</option>
+                    <option value="vigilanceType">Tipo de vigilancia</option>
+                    <option value="consequences">Consecuencias en el paciente</option>
+                    <option value="reportingUnit">Unidad notificadora</option>
+                </select>
+            </div>
+            
+            <div id="subcategoryBoxesSection" style="display:none; margin-top:20px;">
+                <h3 style="font-size:16px; margin-bottom:15px;">Selección de Subcategorías:</h3>
                 <div style="display:grid; grid-template-columns:1fr 100px 1fr; gap:20px; align-items:start;">
                     <div style="border:2px solid #dc3545; border-radius:8px; padding:15px; background:#fff0f0;">
-                        <h3 style="margin:0 0 15px 0; color:#dc3545; font-size:16px;">Categorías disponibles</h3>
-                        <div id="categoriesOutAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
+                        <h3 style="margin:0 0 15px 0; color:#dc3545; font-size:16px;">Fuera de análisis</h3>
+                        <div id="subcategoriesOutAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
                         </div>
                     </div>
                     
                     <div style="display:flex; flex-direction:column; justify-content:center; gap:10px;">
-                        <button onclick="selectCategory()" style="padding:8px; font-size:20px;" title="Seleccionar categoría">→</button>
+                        <button onclick="moveAllSubcategories('toIn')" style="padding:8px; font-size:20px;" title="Mover todos a 'En análisis'">→</button>
+                        <button onclick="moveAllSubcategories('toOut')" style="padding:8px; font-size:20px;" title="Mover todos a 'Fuera de análisis'">←</button>
                     </div>
                     
                     <div style="border:2px solid #667eea; border-radius:8px; padding:15px; background:#f8f9fa;">
-                        <h3 style="margin:0 0 15px 0; color:#667eea; font-size:16px;">Categoría seleccionada</h3>
-                        <div id="categoryInAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
-                            <p style="color:#999; font-size:13px; margin:0;">Selecciona una categoría</p>
+                        <h3 style="margin:0 0 15px 0; color:#667eea; font-size:16px;">En análisis</h3>
+                        <div id="subcategoriesInAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
                         </div>
                     </div>
-                </div>
-            </div>
-            
-            <div style="margin-top:20px;" id="subcategorySection" style="display:none;">
-                <h3 style="font-size:16px; margin-bottom:10px;">Subcategorías disponibles:</h3>
-                <div style="background:#f8f9fa; padding:15px; border-radius:8px;">
-                    <div style="margin-bottom:10px;">
-                        <button onclick="selectAllSubcategories(true)" style="margin-right:10px; font-size:12px;">Seleccionar todas</button>
-                        <button onclick="selectAllSubcategories(false)" style="font-size:12px;">Deseleccionar todas</button>
-                    </div>
-                    <div id="subcategoryFilters" style="max-height:250px; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:8px;"></div>
                 </div>
             </div>
             
@@ -976,86 +979,20 @@ function buildServiceBoxes() {
             }
             
             buildServiceBoxes();
-            buildCategoryBoxes();
             
             document.getElementById('crossAnalysisStep').style.display = 'block';
             document.getElementById('crossAnalysisStep').scrollIntoView({ behavior: 'smooth' });
         }
         
-        function buildCategoryBoxes() {
-            const outBox = document.getElementById('categoriesOutAnalysis');
-            outBox.innerHTML = '';
+        function loadSubcategoryBoxes() {
+            const category = document.getElementById('crossCategory').value;
+            const boxesSection = document.getElementById('subcategoryBoxesSection');
             
-            const categories = [
-                { value: 'classification', label: 'Clasificación' },
-                { value: 'eventDimension', label: 'Dimensión de evento' },
-                { value: 'eventType', label: 'Evento' },
-                { value: 'vigilanceType', label: 'Tipo de vigilancia' },
-                { value: 'consequences', label: 'Consecuencias en el paciente' },
-                { value: 'reportingUnit', label: 'Unidad notificadora' }
-            ];
-            
-            categories.forEach(cat => {
-                const catBtn = document.createElement('button');
-                catBtn.textContent = cat.label;
-                catBtn.className = 'category-item';
-                catBtn.dataset.value = cat.value;
-                catBtn.style.cssText = 'padding:8px; text-align:left; background:white; border:1px solid #ddd; border-radius:5px; cursor:pointer; transition:all 0.2s; color:#333;';
-                catBtn.onmouseover = function() { this.style.background = '#ffe7e7'; };
-                catBtn.onmouseout = function() { this.style.background = 'white'; };
-                catBtn.onclick = function() { moveCategory(cat.value, cat.label); };
-                outBox.appendChild(catBtn);
-            });
-        }
-        
-        function moveCategory(value, label) {
-            const inBox = document.getElementById('categoryInAnalysis');
-            const outBox = document.getElementById('categoriesOutAnalysis');
-            
-            // Clear previous selection
-            inBox.innerHTML = '';
-            
-            // Reset all buttons to outBox
-            const allButtons = Array.from(outBox.querySelectorAll('button'));
-            allButtons.forEach(btn => {
-                btn.style.background = 'white';
-            });
-            
-            // Move selected to inBox
-            const selectedBtn = document.createElement('button');
-            selectedBtn.textContent = label;
-            selectedBtn.className = 'category-item';
-            selectedBtn.dataset.value = value;
-            selectedBtn.style.cssText = 'padding:8px; text-align:left; background:white; border:1px solid #667eea; border-radius:5px; cursor:pointer; transition:all 0.2s; color:#333;';
-            selectedBtn.onmouseover = function() { this.style.background = '#e7f3ff'; };
-            selectedBtn.onmouseout = function() { this.style.background = 'white'; };
-            selectedBtn.onclick = function() { clearCategory(); };
-            inBox.appendChild(selectedBtn);
-            
-            // Load subcategories
-            loadSubcategories(value);
-        }
-        
-        function selectCategory() {
-            // Find which button is currently selected in the left box
-            const outBox = document.getElementById('categoriesOutAnalysis');
-            const buttons = outBox.querySelectorAll('button');
-            
-            // For now, just show a message if none selected
-            if (buttons.length > 0) {
-                alert('Haz clic directamente en una categoría para seleccionarla');
+            if (!category) {
+                boxesSection.style.display = 'none';
+                return;
             }
-        }
-        
-        function clearCategory() {
-            const inBox = document.getElementById('categoryInAnalysis');
-            inBox.innerHTML = '<p style="color:#999; font-size:13px; margin:0;">Selecciona una categoría</p>';
             
-            // Hide subcategories
-            document.getElementById('subcategorySection').style.display = 'none';
-        }
-        
-        function loadSubcategories(category) {
             const colIndex = getCategoryColumnIndex(category);
             const values = new Set();
             
@@ -1068,20 +1005,72 @@ function buildServiceBoxes() {
                 }
             });
             
-            const subcategoryContainer = document.getElementById('subcategoryFilters');
-            subcategoryContainer.innerHTML = '';
+            const inBox = document.getElementById('subcategoriesInAnalysis');
+            const outBox = document.getElementById('subcategoriesOutAnalysis');
             
-            Array.from(values).sort().forEach(val => {
-                const label = document.createElement('label');
-                label.style.cssText = 'display:flex; align-items:center; gap:5px; font-size:13px;';
-                const sanitizedVal = val.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-                label.innerHTML = `<input type="checkbox" class="subcategory-filter" value="${sanitizedVal}" checked> ${sanitizedVal}`;
-                subcategoryContainer.appendChild(label);
+            inBox.innerHTML = '';
+            outBox.innerHTML = '';
+            
+            // All subcategories start in "En análisis" (right side)
+            Array.from(values).sort().forEach(subcat => {
+                const subcatBtn = document.createElement('button');
+                subcatBtn.textContent = subcat;
+                subcatBtn.className = 'subcategory-item';
+                subcatBtn.style.cssText = 'padding:8px; text-align:left; background:white; border:1px solid #ddd; border-radius:5px; cursor:pointer; transition:all 0.2s; color:#333;';
+                subcatBtn.onmouseover = function() { this.style.background = '#e7f3ff'; };
+                subcatBtn.onmouseout = function() { this.style.background = 'white'; };
+                subcatBtn.onclick = function() { moveSubcategory(subcat, 'toOut'); };
+                inBox.appendChild(subcatBtn);
             });
             
-            document.getElementById('subcategorySection').style.display = 'block';
+            boxesSection.style.display = 'block';
         }
-        
+
+function moveSubcategory(subcatName, direction) {
+            const inBox = document.getElementById('subcategoriesInAnalysis');
+            const outBox = document.getElementById('subcategoriesOutAnalysis');
+            
+            const allButtons = [...inBox.querySelectorAll('button'), ...outBox.querySelectorAll('button')];
+            const targetBtn = allButtons.find(btn => btn.textContent === subcatName);
+            
+            if (!targetBtn) return;
+            
+            if (direction === 'toOut') {
+                targetBtn.onmouseover = function() { this.style.background = '#ffe7e7'; };
+                targetBtn.onmouseout = function() { this.style.background = 'white'; };
+                targetBtn.onclick = function() { moveSubcategory(subcatName, 'toIn'); };
+                outBox.appendChild(targetBtn);
+            } else {
+                targetBtn.onmouseover = function() { this.style.background = '#e7f3ff'; };
+                targetBtn.onmouseout = function() { this.style.background = 'white'; };
+                targetBtn.onclick = function() { moveSubcategory(subcatName, 'toOut'); };
+                inBox.appendChild(targetBtn);
+            }
+        }
+        function moveAllSubcategories(action) {
+            const inBox = document.getElementById('subcategoriesInAnalysis');
+            const outBox = document.getElementById('subcategoriesOutAnalysis');
+            
+            if (action === 'toOut') {
+                const buttons = Array.from(inBox.querySelectorAll('button'));
+                buttons.forEach(btn => {
+                    const subcatName = btn.textContent;
+                    btn.onmouseover = function() { this.style.background = '#ffe7e7'; };
+                    btn.onmouseout = function() { this.style.background = 'white'; };
+                    btn.onclick = function() { moveSubcategory(subcatName, 'toIn'); };
+                    outBox.appendChild(btn);
+                });
+            } else if (action === 'toIn') {
+                const buttons = Array.from(outBox.querySelectorAll('button'));
+                buttons.forEach(btn => {
+                    const subcatName = btn.textContent;
+                    btn.onmouseover = function() { this.style.background = '#e7f3ff'; };
+                    btn.onmouseout = function() { this.style.background = 'white'; };
+                    btn.onclick = function() { moveSubcategory(subcatName, 'toOut'); };
+                    inBox.appendChild(btn);
+                });
+            }
+        }
         function selectAllSubcategories(select) {
             document.querySelectorAll('.subcategory-filter').forEach(cb => cb.checked = select);
         }
@@ -1145,18 +1134,23 @@ function buildServiceBoxes() {
                     return;
                 }
                 
-                // Get selected category from the box
-                const categoryInBox = document.getElementById('categoryInAnalysis');
-                const categoryBtn = categoryInBox.querySelector('button');
-                if (!categoryBtn) {
+                // Get selected category from dropdown
+                const selectedCategory = document.getElementById('crossCategory').value;
+                if (!selectedCategory) {
                     hideLoading();
                     showError('Debes seleccionar una categoría a analizar.');
                     return;
                 }
-                const selectedCategory = categoryBtn.dataset.value;
                 
-                const selectedSubcategories = Array.from(document.querySelectorAll('.subcategory-filter:checked')).map(cb => cb.value);
+                // Get selected subcategories from "En análisis" box
+                const subcategoriesInBox = document.getElementById('subcategoriesInAnalysis');
+                const selectedSubcategories = Array.from(subcategoriesInBox.querySelectorAll('button')).map(btn => btn.textContent);
                 
+                if (selectedSubcategories.length === 0) {
+                    hideLoading();
+                    showError('Debes tener al menos una subcategoría en "En análisis".');
+                    return;
+                }                
                 const additionalFilters = [];
                 if (selectedSubcategories.length > 0) {
                     additionalFilters.push({ 
@@ -1194,13 +1188,13 @@ function buildServiceBoxes() {
             }
         }
 
-        function buildDenominatorMappings(selectedCategory) {
+       function buildDenominatorMappings(selectedCategory) {
             const container = document.getElementById('denominatorMappings');
             container.innerHTML = '';
             
-            // Get the selected subcategories
-            const selectedSubcategories = Array.from(document.querySelectorAll('.subcategory-filter:checked')).map(cb => cb.value);
-            
+            // Get the selected subcategories from "En análisis" box
+            const subcategoriesInBox = document.getElementById('subcategoriesInAnalysis');
+            const selectedSubcategories = Array.from(subcategoriesInBox.querySelectorAll('button')).map(btn => btn.textContent);            
             // Get available denominator columns (all columns except "Fecha")
             const denominatorColumns = denominatorsData.headers
                 .map((h, idx) => ({ header: h, index: idx }))
