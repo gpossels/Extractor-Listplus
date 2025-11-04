@@ -1842,39 +1842,22 @@ function displayClassificationRatios(ratioData) {
                         <thead>
                             <tr>
                                 <th>Período</th>
-                                <th colspan="3" style="text-align:center; background:#667eea;">Eventos Centinela |:| Eventos Adversos</th>
-                                <th colspan="3" style="text-align:center; background:#764ba2;">Eventos Adversos |:| Near Miss</th>
-                                <th colspan="3" style="text-align:center; background:#667eea;">Near Miss |:| Incidentes de Seguridad</th>
-                            </tr>
-                            <tr>
-                                <th></th>
-                                <th style="background:#e7f3ff;">Menor</th>
-                                <th style="background:#e7f3ff;">|:|</th>
-                                <th style="background:#e7f3ff;">Mayor (Ratio)</th>
-                                <th style="background:#f0e7ff;">Menor</th>
-                                <th style="background:#f0e7ff;">|:|</th>
-                                <th style="background:#f0e7ff;">Mayor (Ratio)</th>
-                                <th style="background:#e7f3ff;">Menor</th>
-                                <th style="background:#e7f3ff;">|:|</th>
-                                <th style="background:#e7f3ff;">Mayor (Ratio)</th>
+                                <th style="text-align:center;">Eventos Centinela : Eventos Adversos</th>
+                                <th style="text-align:center;">Eventos Adversos : Near Miss</th>
+                                <th style="text-align:center;">Near Miss : Incidentes de Seguridad</th>
                             </tr>
                         </thead>
                         <tbody>
     `;
     
     ratioData.forEach(row => {
+        ratioData.forEach(row => {
         ratiosHtml += `
             <tr>
                 <td><strong>${row.period}</strong></td>
-                <td style="text-align:center;">${row.centinelaAdversos.small}</td>
-                <td style="text-align:center;">|:|</td>
-                <td style="text-align:center;">${row.centinelaAdversos.large} (${row.centinelaAdversos.ratio})</td>
-                <td style="text-align:center;">${row.adversosNearMiss.small}</td>
-                <td style="text-align:center;">|:|</td>
-                <td style="text-align:center;">${row.adversosNearMiss.large} (${row.adversosNearMiss.ratio})</td>
-                <td style="text-align:center;">${row.nearMissIncidentes.small}</td>
-                <td style="text-align:center;">|:|</td>
-                <td style="text-align:center;">${row.nearMissIncidentes.large} (${row.nearMissIncidentes.ratio})</td>
+                <td style="text-align:center;">${row.centinelaAdversos.small}:${row.centinelaAdversos.large}</td>
+                <td style="text-align:center;">${row.adversosNearMiss.small}:${row.adversosNearMiss.large}</td>
+                <td style="text-align:center;">${row.nearMissIncidentes.small}:${row.nearMissIncidentes.large}</td>
             </tr>
         `;
     });
