@@ -455,7 +455,7 @@
                 </div>
             </div>
             
-            <button onclick="showCrossAnalysisConfig()" style="width:100%; margin-top:15px;">Configurar Análisis Cruzado</button>
+            <button onclick="showCrossAnalysisConfig()" style="width:100%; margin-top:15px;">Configurar Análisis</button>
         </div>
         
         <div class="step" id="crossAnalysisStep" style="display:none;">
@@ -482,7 +482,7 @@
                 </div>
             </div>
             
-            <h2 style="margin-top:30px;">Paso 4: Configurar Análisis Cruzado</h2>
+            <h2 style="margin-top:30px;">Paso 4: Configurar Análisis</h2>
             
             <div class="control-group" style="margin-bottom:20px;">
                 <label>Categoría a Analizar (Columnas):</label>
@@ -1102,7 +1102,7 @@ function moveSubcategory(subcatName, direction) {
         
         function generateCrossAnalysis() {
             try {
-                showLoading('Generando análisis cruzado...');
+                showLoading('Generando análisis...');
                 
                 const crossCategory = document.getElementById('crossCategory').value;
                 const periodType = document.getElementById('periodType').value;
@@ -1184,7 +1184,7 @@ function moveSubcategory(subcatName, direction) {
                 
             } catch (error) {
                 hideLoading();
-                showError(`Error al generar análisis cruzado: ${error.message}`);
+                showError(`Error al generar análisis: ${error.message}`);
             }
         }
 
@@ -1401,7 +1401,7 @@ return {
     </div>
     <div class="step collapsible-section">
         <h2 onclick="toggleSection('crossAnalysisTable')" style="cursor:pointer;">
-            <span id="icon-crossAnalysisTable">▼</span> Análisis Cruzado: ${categoryNames[config.crossCategory]}
+            <span id="icon-crossAnalysisTable">▼</span> Análisis: ${categoryNames[config.crossCategory]}
         </h2>
             <div id="crossAnalysisTable" class="section-content">
                 <div class="preview">
@@ -1877,7 +1877,7 @@ function downloadExcel() {
                     wsData.push(totalRow);
                     
                     const ws = XLSX.utils.aoa_to_sheet(wsData);
-                    XLSX.utils.book_append_sheet(wb, ws, 'Análisis Cruzado');
+                    XLSX.utils.book_append_sheet(wb, ws, 'Análisis');
                 }
             
                 XLSX.writeFile(wb, 'Analisis_Incidentes.xlsx');
