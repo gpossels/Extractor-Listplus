@@ -1803,10 +1803,10 @@ function calculateClassificationRatios(crossData) {
         const nearMiss = periodData[period]['Near Miss'] || 0;
         const incidentes = periodData[period]['Incidentes de Seguridad'] || 0;
         
-        // Calculate ratios
-        const ratio1 = calculateRatio(centinela, adversos);
-        const ratio2 = calculateRatio(adversos, nearMiss);
-        const ratio3 = calculateRatio(nearMiss, incidentes);
+        // Calculate ratios: second divided by first
+        const ratio1 = calculateSimpleRatio(centinela, adversos);  // Adversos ÷ Centinela
+        const ratio2 = calculateSimpleRatio(adversos, nearMiss);   // Near Miss ÷ Adversos
+        const ratio3 = calculateSimpleRatio(nearMiss, incidentes); // Incidentes ÷ Near Miss
         
         ratioData.push({
             period: period,
@@ -1819,17 +1819,13 @@ function calculateClassificationRatios(crossData) {
     return ratioData;
 }
 
-function calculateRatio(count1, count2) {
-    if (count1 === 0 && count2 === 0) return { small: 0, large: 0, ratio: '-' };
-    if (count1 === 0) return { small: 0, large: count2, ratio: '-' };
-    if (count2 === 0) return { small: count1, large: 0, ratio: '-' };
+function calculateSimpleRatio(denominator, numerator) {
+    if (denominator === 0 || numerator === 0) return '-';
     
-    const smaller = Math.min(count1, count2);
-    const larger = Math.max(count1, count2);
-    const ratio = (larger / smaller).toFixed(2);
-    
-    return { small: smaller, large: larger, ratio: ratio };
+    const ratio = (numerator / denominator).toFixed(2);
+    return `1 : ${ratio}`;
 }
+        
 function displayClassificationRatios(ratioData) {
     let ratiosHtml = `
         <div class="step collapsible-section">
@@ -1854,9 +1850,9 @@ function displayClassificationRatios(ratioData) {
         ratiosHtml += `
             <tr>
                 <td><strong>${row.period}</strong></td>
-                <td style="text-align:center;">${row.centinelaAdversos.small}:${row.centinelaAdversos.large}</td>
-                <td style="text-align:center;">${row.adversosNearMiss.small}:${row.adversosNearMiss.large}</td>
-                <td style="text-align:center;">${row.nearMissIncidentes.small}:${row.nearMissIncidentes.large}</td>
+                <<td style="text-align:center;">${row.centinelaAdversos}</td>
+                <td style="text-align:center;">${row.adversosNearMiss}</td>
+                <td style="text-align:center;">${row.nearMissIncidentes}</td>
             </tr>
         `;
     });
