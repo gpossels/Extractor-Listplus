@@ -1387,14 +1387,16 @@ return {
     const inBox = document.getElementById('servicesInAnalysis');
     const selectedServicesList = Array.from(inBox.querySelectorAll('button')).map(btn => btn.textContent);
     let tableHtml = `
-        <div class="step">
-            <div style="background:#e7f3ff; padding:15px; margin-bottom:20px; border-radius:8px; border-left:4px solid #2196F3;">
-                <h3 style="margin:0 0 10px 0; color:#2196F3; font-size:14px;">Servicios incluidos en el análisis (${selectedServicesList.length}):</h3>
-                <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                    ${selectedServicesList.map(service => `<span style="background:white; padding:5px 10px; border-radius:5px; font-size:12px; border:1px solid #2196F3;">${service}</span>`).join('')}
-                </div>
+    <div class="step">
+        <div style="background:#e7f3ff; padding:15px; margin-bottom:20px; border-radius:8px; border-left:4px solid #2196F3;">
+            <h3 onclick="toggleSection('servicesIncludedSection')" style="margin:0 0 10px 0; color:#2196F3; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                <span id="icon-servicesIncludedSection">▼</span> Servicios incluidos en el análisis (${selectedServicesList.length})
+            </h3>
+            <div id="servicesIncludedSection" style="display:flex; flex-wrap:wrap; gap:8px;">
+                ${selectedServicesList.map(service => `<span style="background:white; padding:5px 10px; border-radius:5px; font-size:12px; border:1px solid #2196F3;">${service}</span>`).join('')}
             </div>
         </div>
+    </div>
         <div class="step collapsible-section">
             <h2 onclick="toggleSection('crossAnalysisTable')" style="cursor:pointer;">
                 <span id="icon-crossAnalysisTable">▼</span> Análisis Cruzado: ${categoryNames[config.crossCategory]}
