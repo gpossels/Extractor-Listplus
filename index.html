@@ -1795,32 +1795,18 @@ function toggleSection(sectionId) {
 function calculateClassificationRatios(crossData) {
     const { periodData, selectedPeriods } = crossData;
     
-    // DEBUG: Show what keys actually exist in the data
-    if (selectedPeriods.length > 0) {
-        const firstPeriod = selectedPeriods[0];
-        console.log('=== DEBUG: Actual category names in data ===');
-        console.log('Period:', firstPeriod);
-        console.log('Available keys:', Object.keys(periodData[firstPeriod]));
-        console.log('Data for this period:', periodData[firstPeriod]);
-    }
-    
     const ratioData = [];
     
     selectedPeriods.forEach(period => {
-        const centinela = periodData[period]['Evento Centinela'] || 0;
-        const adversos = periodData[period]['Evento Adverso'] || 0;
+        const centinela = periodData[period]['Centinela'] || 0;
+        const adversos = periodData[period]['Adverso'] || 0;
         const nearMiss = periodData[period]['Near Miss'] || 0;
-        const incidentes = periodData[period]['Incidente de Seguridad'] || 0;
+        const incidentes = periodData[period]['Incidente'] || 0;
         
-        console.log(`Period: ${period}`);
-        console.log(`  Centinela: ${centinela}, Adversos: ${adversos}`);
-        console.log(`  Near Miss: ${nearMiss}, Incidentes: ${incidentes}`);
-        
+        // Calculate ratios: second divided by first
         const ratio1 = calculateSimpleRatio(centinela, adversos);
         const ratio2 = calculateSimpleRatio(adversos, nearMiss);
         const ratio3 = calculateSimpleRatio(nearMiss, incidentes);
-        
-        console.log(`  Ratios: ${ratio1}, ${ratio2}, ${ratio3}`);
         
         ratioData.push({
             period: period,
@@ -1829,8 +1815,6 @@ function calculateClassificationRatios(crossData) {
             nearMissIncidentes: ratio3
         });
     });
-    
-    console.log('Final ratioData:', ratioData);
     
     return ratioData;
 }
