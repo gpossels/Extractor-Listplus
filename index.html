@@ -1610,6 +1610,46 @@ return {
                 alert('Error al copiar fila: ' + error.message);
             }
         }
+
+function copyRatioColumn(event, columnName) {
+    event.stopPropagation();
+    
+    try {
+        const cells = document.querySelectorAll(`td[data-ratio-col="${columnName}"]`);
+        const values = Array.from(cells).map(cell => cell.textContent.trim());
+        const text = values.join('\n');
+        
+        navigator.clipboard.writeText(text).then(() => {
+            showCopiedNotification(`Columna copiada`);
+        }).catch(err => {
+            alert('Error al copiar: ' + err);
+        });
+    } catch (error) {
+        alert('Error al copiar columna: ' + error.message);
+    }
+}
+
+function copyPlansTasksColumn(event, columnName) {
+    event.stopPropagation();
+    
+    try {
+        const cells = document.querySelectorAll(`td[data-planstasks-col="${columnName}"]`);
+        const values = Array.from(cells).map(cell => cell.textContent.trim());
+        const text = values.join('\n');
+        
+        navigator.clipboard.writeText(text).then(() => {
+            showCopiedNotification(`Columna copiada`);
+        }).catch(err => {
+            alert('Error al copiar: ' + err);
+        });
+    } catch (error) {
+        alert('Error al copiar columna: ' + error.message);
+    }
+}
+
+function handleDenominatorsFile(e) {
+
+        
 function handleDenominatorsFile(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -1853,12 +1893,12 @@ function displayPlansAndTasks(plansTasksData) {
                 <div class="preview">
                     <table>
                         <thead>
-                            <tr>
-                                <th>Período</th>
-                                <th style="text-align:center;">N° de Planes</th>
-                                <th style="text-align:center;">N° de Tareas</th>
-                            </tr>
-                        </thead>
+    <tr>
+        <th>Período</th>
+        <th style="text-align:center;">N° de Planes<button class="copy-btn" onclick="copyPlansTasksColumn(event, 'numPlans')">copiar</button></th>
+        <th style="text-align:center;">N° de Tareas<button class="copy-btn" onclick="copyPlansTasksColumn(event, 'numTasks')">copiar</button></th>
+    </tr>
+</thead>
                         <tbody>
     `;
     
@@ -1866,17 +1906,17 @@ function displayPlansAndTasks(plansTasksData) {
     let totalTasks = 0;
     
     plansTasksData.forEach(row => {
-        totalPlans += row.numPlans;
-        totalTasks += row.numTasks;
-        
-        tableHtml += `
-            <tr>
-                <td><strong>${row.period}</strong></td>
-                <td style="text-align:center;">${row.numPlans}</td>
-                <td style="text-align:center;">${row.numTasks}</td>
-            </tr>
-        `;
-    });
+    totalPlans += row.numPlans;
+    totalTasks += row.numTasks;
+    
+    tableHtml += `
+        <tr>
+            <td><strong>${row.period}</strong></td>
+            <td style="text-align:center;" data-planstasks-col="numPlans">${row.numPlans}</td>
+            <td style="text-align:center;" data-planstasks-col="numTasks">${row.numTasks}</td>
+        </tr>
+    `;
+});
     
     // Add total row
     tableHtml += `
@@ -1941,26 +1981,26 @@ function displayClassificationRatios(ratioData) {
                 <div class="preview">
                     <table>
                         <thead>
-                            <tr>
-                                <th>Período</th>
-                                <th style="text-align:center;">Eventos Centinela : Eventos Adversos</th>
-                                <th style="text-align:center;">Eventos Adversos : Near Miss</th>
-                                <th style="text-align:center;">Near Miss : Incidentes de Seguridad</th>
-                            </tr>
-                        </thead>
+                                <tr>
+                                    <th>Período</th>
+                                    <th style="text-align:center;">Eventos Centinela : Eventos Adversos<button class="copy-btn" onclick="copyRatioColumn(event, 'centinelaAdversos')">copiar</button></th>
+                                    <th style="text-align:center;">Eventos Adversos : Near Miss<button class="copy-btn" onclick="copyRatioColumn(event, 'adversosNearMiss')">copiar</button></th>
+                                    <th style="text-align:center;">Near Miss : Incidentes de Seguridad<button class="copy-btn" onclick="copyRatioColumn(event, 'nearMissIncidentes')">copiar</button></th>
+                                </tr>
+                            </thead>
                         <tbody>
     `;
     
     ratioData.forEach(row => {
-        ratiosHtml += `
-            <tr>
-                <td><strong>${row.period}</strong></td>
-                <td style="text-align:center;">${row.centinelaAdversos}</td>
-                <td style="text-align:center;">${row.adversosNearMiss}</td>
-                <td style="text-align:center;">${row.nearMissIncidentes}</td>
-            </tr>
-        `;
-    });
+    ratiosHtml += `
+        <tr>
+            <td><strong>${row.period}</strong></td>
+            <td style="text-align:center;" data-ratio-col="centinelaAdversos">${row.centinelaAdversos}</td>
+            <td style="text-align:center;" data-ratio-col="adversosNearMiss">${row.adversosNearMiss}</td>
+            <td style="text-align:center;" data-ratio-col="nearMissIncidentes">${row.nearMissIncidentes}</td>
+        </tr>
+    `;
+});
     
     ratiosHtml += `
                         </tbody>
