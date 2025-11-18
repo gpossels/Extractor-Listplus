@@ -1646,8 +1646,55 @@ function copyPlansTasksColumn(event, columnName) {
         alert('Error al copiar columna: ' + error.message);
     }
 }
+function copyRatioRow(event, rowName) {
+    event.stopPropagation();
+    
+    try {
+        const row = document.querySelector(`tr[data-ratio-row="${rowName}"]`);
+        if (!row) {
+            alert('No se encontró la fila');
+            return;
+        }
+        
+        const cells = row.querySelectorAll('td');
+        const values = Array.from(cells).slice(1).map(cell => cell.textContent.trim());
+        const text = values.join('\t');
+        
+        navigator.clipboard.writeText(text).then(() => {
+            showCopiedNotification(`Fila "${rowName}" copiada`);
+        }).catch(err => {
+            alert('Error al copiar: ' + err);
+        });
+    } catch (error) {
+        alert('Error al copiar fila: ' + error.message);
+    }
+}
 
-       
+function copyPlansTasksRow(event, rowName) {
+    event.stopPropagation();
+    
+    try {
+        const row = document.querySelector(`tr[data-planstasks-row="${rowName}"]`);
+        if (!row) {
+            alert('No se encontró la fila');
+            return;
+        }
+        
+        const cells = row.querySelectorAll('td');
+        const values = Array.from(cells).slice(1).map(cell => cell.textContent.trim());
+        const text = values.join('\t');
+        
+        navigator.clipboard.writeText(text).then(() => {
+            showCopiedNotification(`Fila "${rowName}" copiada`);
+        }).catch(err => {
+            alert('Error al copiar: ' + err);
+        });
+    } catch (error) {
+        alert('Error al copiar fila: ' + error.message);
+    }
+}
+
+     
 function handleDenominatorsFile(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -1907,9 +1954,10 @@ function displayPlansAndTasks(plansTasksData) {
     totalPlans += row.numPlans;
     totalTasks += row.numTasks;
     
+    const escapedPeriod = String(row.period).replace(/'/g, "\\'");
     tableHtml += `
-        <tr>
-            <td><strong>${row.period}</strong></td>
+        <tr data-planstasks-row="${escapedPeriod}">
+            <td><strong>${row.period}</strong><button class="row-copy-btn" onclick="copyPlansTasksRow(event, '${escapedPeriod}')">copiar</button></td>
             <td style="text-align:center;" data-planstasks-col="numPlans">${row.numPlans}</td>
             <td style="text-align:center;" data-planstasks-col="numTasks">${row.numTasks}</td>
         </tr>
@@ -1989,10 +2037,11 @@ function displayClassificationRatios(ratioData) {
                         <tbody>
     `;
     
-    ratioData.forEach(row => {
+   ratioData.forEach(row => {
+    const escapedPeriod = String(row.period).replace(/'/g, "\\'");
     ratiosHtml += `
-        <tr>
-            <td><strong>${row.period}</strong></td>
+        <tr data-ratio-row="${escapedPeriod}">
+            <td><strong>${row.period}</strong><button class="row-copy-btn" onclick="copyRatioRow(event, '${escapedPeriod}')">copiar</button></td>
             <td style="text-align:center;" data-ratio-col="centinelaAdversos">${row.centinelaAdversos}</td>
             <td style="text-align:center;" data-ratio-col="adversosNearMiss">${row.adversosNearMiss}</td>
             <td style="text-align:center;" data-ratio-col="nearMissIncidentes">${row.nearMissIncidentes}</td>
