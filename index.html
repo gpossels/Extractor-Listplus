@@ -1531,7 +1531,11 @@ return {
         </div>
     `;
     document.getElementById('statsContainer').innerHTML = statsHtml;
-    
+
+    // Add Plans and Tasks table
+    const plansTasksData = calculatePlansAndTasks(crossData);
+    displayPlansAndTasks(plansTasksData)
+            
     // Add Classification Ratios section if category is "classification"
     if (config.crossCategory === 'classification') {
         const ratioData = calculateClassificationRatios(crossData);
@@ -1801,6 +1805,99 @@ function toggleSection(sectionId) {
                 icon.textContent = '▶';
             }
         }
+
+function calculatePlansAndTasks(crossData) {
+    const { config, selectedPeriods } = crossData;
+    const periodType = config.periodType;
+    const dateType = config.dateType;
+    const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
+    
+    const plansTasksData = [];
+    
+    selectedPeriods.forEach(period => {
+        const plansInPeriod = new Set();
+        let totalTasks = 0;
+        
+        // Use ALL rows (including duplicates) from cleanedData
+        cleanedData.rows.forEach(row => {
+            const dateStr = row[dateColIndex];
+            const date = parseDate(dateStr);
+            const rowPeriod = getPeriodKey(date, periodType);
+            
+            if (rowPeriod === period) {
+                const planId = row[columnIndices.eventId];
+                if (planId) {
+                    plansInPeriod.add(planId);
+                    totalTasks++;
+                }
+            }
+        });
+        
+        plansTasksData.push({
+            period: period,
+            numPlans: plansInPeriod.size,
+            numTasks: totalTasks
+        });
+    });
+    
+    return plansTasksData;
+}
+
+function displayPlansAndTasks(plansTasksData) {
+    let tableHtml = `
+        <div class="step collapsible-section">
+            <h2 onclick="toggleSection('plansTasksTable')" style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+                <span id="icon-plansTasksTable">▼</span> Planes de Mejora y Tareas
+            </h2>
+            <div id="plansTasksTable" class="section-content">
+                <div class="preview">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Período</th>
+                                <th style="text-align:center;">N° de Planes</th>
+                                <th style="text-align:center;">N° de Tareas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+    
+    let totalPlans = 0;
+    let totalTasks = 0;
+    
+    plansTasksData.forEach(row => {
+        totalPlans += row.numPlans;
+        totalTasks += row.numTasks;
+        
+        tableHtml += `
+            <tr>
+                <td><strong>${row.period}</strong></td>
+                <td style="text-align:center;">${row.numPlans}</td>
+                <td style="text-align:center;">${row.numTasks}</td>
+            </tr>
+        `;
+    });
+    
+    // Add total row
+    tableHtml += `
+            <tr style="background:#f0f0f0;font-weight:bold;">
+                <td>TOTAL</td>
+                <td style="text-align:center;">${totalPlans}</td>
+                <td style="text-align:center;">${totalTasks}</td>
+            </tr>
+        `;
+    
+    tableHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('previewContainer').insertAdjacentHTML('beforeend', tableHtml);
+}
+        
 function calculateClassificationRatios(crossData) {
     const { periodData, selectedPeriods } = crossData;
     
