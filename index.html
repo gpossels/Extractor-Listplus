@@ -743,34 +743,43 @@
                 columnIndices = validation.indices;
                 const rows = jsonData.slice(1);
                 
-                const seen = new Set();
-                const uniqueRows = rows.filter(row => {
-                    const id = row[columnIndices.eventId];
-                    if (!id || seen.has(id)) {
-                        return false;
-                    }
-                    seen.add(id);
-                    return true;
-                });
+                const allRows = rows.filter(row => {
+    const id = row[columnIndices.eventId];
+    return id; // Keep rows that have an ID
+});
 
-                cleanedData = {
-                    headers: headers,
-                    rows: uniqueRows
-                };
+// Create a Set of unique event IDs for counting purposes
+const uniqueIds = new Set();
+const uniqueRows = [];
+allRows.forEach(row => {
+    const id = row[columnIndices.eventId];
+    if (!uniqueIds.has(id)) {
+        uniqueIds.add(id);
+        uniqueRows.push(row);
+    }
+});
 
+cleanedData = {
+    headers: headers,
+    rows: allRows, // Store ALL rows (including duplicates)
+    uniqueRows: uniqueRows, // Store unique rows for analysis
+    uniqueIds: uniqueIds // Store unique IDs for counting
+};
                 const uploadArea = document.getElementById('uploadArea');
                 uploadArea.classList.add('loaded');
                 uploadArea.classList.remove('error');
                 document.getElementById('uploadText').innerHTML = '✅ Archivo cargado correctamente';
                 
                 const info = document.getElementById('fileInfo');
-                info.style.display = 'block';
-                info.innerHTML = `
-                    <strong>Información del archivo:</strong><br>
-                    • Filas originales: ${rows.length}<br>
-                    • Duplicados eliminados: ${rows.length - uniqueRows.length}<br>
-                    • Filas únicas: ${uniqueRows.length}
-                `;
+info.style.display = 'block';
+const duplicateCount = allRows.length - uniqueIds.size;
+info.innerHTML = `
+    <strong>Información del archivo:</strong><br>
+    • Filas totales: ${allRows.length}<br>
+    • IDs únicos: ${uniqueIds.size}<br>
+    • Duplicados detectados: ${duplicateCount}<br>
+    <small>(Los duplicados se mantienen para análisis de incumplimientos)</small>
+`;
                 
                 
                 extractUniqueServices();
@@ -1322,7 +1331,7 @@ selectedPeriods.forEach(period => {
     periodData[period] = {};
 });
             
-            cleanedData.rows.forEach(row => {
+            cleanedData.uniqueRows.forEach(row => {
                 const dateStr = row[dateColIndex];
                 const date = parseDate(dateStr);
                 const period = getPeriodKey(date, periodType);
