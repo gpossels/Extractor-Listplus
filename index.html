@@ -1400,7 +1400,7 @@ return {
         <h2 onclick="toggleSection('servicesIncludedSection')" style="cursor:pointer; display:flex; align-items:center; gap:8px;">
             <span id="icon-servicesIncludedSection">▼</span> Servicios incluidos en el análisis (${selectedServicesList.length})
         </h2>
-        <div id="servicesIncludedSection" class="section-content">
+        <div id="servicesIncludedSection" class="section-content" style="display:none;">
             <div style="background:#e7f3ff; padding:15px; border-radius:8px; border-left:4px solid #2196F3;">
                 <div style="display:flex; flex-wrap:wrap; gap:8px;">
                     ${selectedServicesList.map(service => `<span style="background:white; padding:5px 10px; border-radius:5px; font-size:12px; border:1px solid #2196F3;">${service}</span>`).join('')}
@@ -1410,9 +1410,9 @@ return {
     </div>
     <div class="step collapsible-section">
         <h2 onclick="toggleSection('crossAnalysisTable')" style="cursor:pointer;">
-            <span id="icon-crossAnalysisTable">▼</span> Análisis: ${categoryNames[config.crossCategory]}
+            <span id="icon-crossAnalysisTable">▼</span> Resultado del Periodo: ${categoryNames[config.crossCategory]}
         </h2>
-            <div id="crossAnalysisTable" class="section-content">
+            <div id="crossAnalysisTable" class="section-content" style="display:none;">
                 <div class="preview">
                     <table>
                         <thead>
@@ -1934,7 +1934,7 @@ function displayPlansAndTasks(plansTasksData) {
             <h2 onclick="toggleSection('plansTasksTable')" style="cursor:pointer; display:flex; align-items:center; gap:8px;">
                 <span id="icon-plansTasksTable">▼</span> Planes de Mejora y Tareas generados en el periodo
             </h2>
-            <div id="plansTasksTable" class="section-content">
+            <div id="plansTasksTable" class="section-content" style="display:none;">
                 <div class="preview">
                     <table>
                         <thead>
