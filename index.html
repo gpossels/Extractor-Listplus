@@ -1831,10 +1831,9 @@ function calculateClassificationRatios(crossData) {
 function calculateSimpleRatio(denominator, numerator) {
     if (denominator === 0 || numerator === 0) return '-';
     
-    const ratio = (numerator / denominator).toFixed(2);
-    return `1 : ${ratio}`;
-}
-        
+    const ratio = (denominator / numerator).toFixed(2);
+    return ratio;
+}        
 function displayClassificationRatios(ratioData) {
     let ratiosHtml = `
         <div class="step collapsible-section">
