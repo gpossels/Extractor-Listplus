@@ -1531,10 +1531,6 @@ return {
         </div>
     `;
     document.getElementById('statsContainer').innerHTML = statsHtml;
-
-    // Add Plans and Tasks table
-    const plansTasksData = calculatePlansAndTasks(crossData);
-    displayPlansAndTasks(plansTasksData)
             
     // Add Classification Ratios section if category is "classification"
     if (config.crossCategory === 'classification') {
@@ -1542,8 +1538,12 @@ return {
         displayClassificationRatios(ratioData);
     }
     
+    // Add Plans and Tasks table (MOVED TO END)
+    const plansTasksData = calculatePlansAndTasks(crossData);
+    displayPlansAndTasks(plansTasksData);
+    
     document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
-}
+        }
 
     function getDenominatorForPeriod(period, denominatorColumnIndex) {
             if (!denominatorsData) return 0;
