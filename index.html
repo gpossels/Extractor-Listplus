@@ -523,27 +523,37 @@
         </div>
         
         <div class="step" id="denominatorsStep" style="display:none;">
-            <h2 onclick="toggleSection('denominatorsContent')" style="cursor:pointer; display:flex; align-items:center; gap:8px;">
-                <span id="icon-denominatorsContent">▼</span> Paso 5: Denominadores y Tasas
-            </h2>
-            <div id="denominatorsContent" class="section-content">
-                <div style="background:#fff3cd; padding:15px; margin-bottom:20px; border-radius:8px; border-left:4px solid #ffc107;">
-                    <strong>ℹ️ Información:</strong> Asigna denominadores a cada categoría para calcular tasas automáticamente.
-                </div>
-                
-                <div style="margin-bottom:20px;">
-                    <label style="font-weight:600; margin-bottom:10px; display:block;">Factor de amplificación (por defecto: 1000)</label>
-                    <input type="number" id="amplificationFactor" value="1000" min="1" style="padding:8px; border:1px solid #ddd; border-radius:5px; width:150px;">
-                </div>
-                
-                <div id="denominatorMappings" style="display:grid; gap:15px;">
-                    <!-- Denominator mappings will be inserted here -->
-                </div>
-                
-                <button onclick="applyDenominatorsAndGenerate()" style="width:100%; margin-top:20px; background:linear-gradient(135deg, #28a745 0%, #20c997 100%);">
-                    📊 Generar Análisis con Tasas
-                </button>
-            </div>
+            <div class="step" id="denominatorsStep" style="display:none;">
+    <h2>Paso 5: Agrupación de Servicios y Denominadores</h2>
+    
+    <div style="background:#fff3cd; padding:15px; margin-bottom:20px; border-radius:8px; border-left:4px solid #ffc107;">
+        <strong>ℹ️ Instrucciones:</strong> Agrupa servicios que comparten el mismo denominador. Luego asigna la columna de denominador y factor de amplificación a cada grupo.
+    </div>
+    
+    <div style="margin-bottom:20px;">
+        <button onclick="createNewGroup()" style="background:linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+            ➕ Crear Nuevo Grupo
+        </button>
+        <button onclick="autoCreateGroups()" style="background:linear-gradient(135deg, #6c757d 0%, #495057 100%); margin-left:10px;">
+            🔄 Auto-agrupar (1 servicio = 1 grupo)
+        </button>
+    </div>
+    
+    <div id="serviceGroupsContainer" style="display:flex; flex-direction:column; gap:20px;">
+        <!-- Groups will be inserted here -->
+    </div>
+    
+    <div style="margin-top:20px; padding:15px; background:#f8f9fa; border-radius:8px;">
+        <h3 style="margin:0 0 15px 0; font-size:16px; color:#667eea;">Servicios sin agrupar:</h3>
+        <div id="ungroupedServices" style="display:flex; flex-wrap:wrap; gap:8px;">
+            <!-- Ungrouped services will be shown here -->
+        </div>
+    </div>
+    
+    <button onclick="generateAnalysisWithRates()" style="width:100%; margin-top:20px; background:linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+        📊 Generar Análisis con Tasas
+    </button>
+</div>
         </div>
         
         <div id="resultsStep" style="display:none;">
@@ -1169,13 +1179,13 @@ function moveSubcategory(subcatName, direction) {
                 }
                 
                 // Check if denominators are loaded
-                if (denominatorsData) {
-                    // Show Paso 5 for denominator configuration
-                    buildDenominatorMappings(selectedCategory);
-                    document.getElementById('denominatorsStep').style.display = 'block';
-                    document.getElementById('denominatorsStep').scrollIntoView({ behavior: 'smooth' });
-                    hideLoading();
-                } else {
+                    if (denominatorsData) {
+                        // Show Paso 5 for service grouping
+                        initializeServiceGrouping();
+                        document.getElementById('denominatorsStep').style.display = 'block';
+                        document.getElementById('denominatorsStep').scrollIntoView({ behavior: 'smooth' });
+                        hideLoading();
+                    } else {
                     // No denominators, generate analysis directly
                     const crossData = performCrossAnalysis({
                         crossCategory,
@@ -2169,7 +2179,489 @@ function resetAnalysis() {
             document.getElementById('analysisStep').scrollIntoView({ behavior: 'smooth' });
         }
 
+let serviceGroups = [];
+let groupIdCounter = 0;
 
+function initializeServiceGrouping() {
+    serviceGroups = [];
+    groupIdCounter = 0;
+    
+    const inBox = document.getElementById('servicesInAnalysis');
+    const selectedServices = Array.from(inBox.querySelectorAll('button')).map(btn => btn.textContent);
+    
+    // Clear containers
+    document.getElementById('serviceGroupsContainer').innerHTML = '';
+    renderUngroupedServices(selectedServices);
+}
+
+function renderUngroupedServices(services) {
+    const container = document.getElementById('ungroupedServices');
+    container.innerHTML = '';
+    
+    if (services.length === 0) {
+        container.innerHTML = '<span style="color:#666; font-style:italic;">Todos los servicios han sido agrupados</span>';
+        return;
+    }
+    
+    services.forEach(service => {
+        const btn = document.createElement('button');
+        btn.textContent = service;
+        btn.className = 'ungrouped-service-btn';
+        btn.dataset.service = service;
+        btn.style.cssText = 'padding:8px 12px; background:#fff; border:1px solid #ddd; border-radius:5px; cursor:grab; font-size:13px; transition:all 0.2s;';
+        btn.draggable = true;
+        btn.ondragstart = (e) => {
+            e.dataTransfer.setData('text/plain', service);
+            btn.style.opacity = '0.5';
+        };
+        btn.ondragend = () => {
+            btn.style.opacity = '1';
+        };
+        btn.onclick = () => addServiceToLastGroup(service);
+        container.appendChild(btn);
+    });
+}
+
+function getUngroupedServices() {
+    const inBox = document.getElementById('servicesInAnalysis');
+    const allServices = Array.from(inBox.querySelectorAll('button')).map(btn => btn.textContent);
+    
+    const groupedServices = new Set();
+    serviceGroups.forEach(group => {
+        group.services.forEach(s => groupedServices.add(s));
+    });
+    
+    return allServices.filter(s => !groupedServices.has(s));
+}
+
+function createNewGroup(groupName = null) {
+    const groupId = groupIdCounter++;
+    
+    if (!groupName) {
+        groupName = `Grupo ${groupId + 1}`;
+    }
+    
+    const group = {
+        id: groupId,
+        name: groupName,
+        services: [],
+        denominatorColumn: '',
+        amplificationFactor: 1000
+    };
+    
+    serviceGroups.push(group);
+    renderGroup(group);
+    updateUngroupedServices();
+    
+    return groupId;
+}
+
+function renderGroup(group) {
+    const container = document.getElementById('serviceGroupsContainer');
+    
+    const groupDiv = document.createElement('div');
+    groupDiv.id = `group-${group.id}`;
+    groupDiv.style.cssText = 'border:2px solid #667eea; border-radius:10px; padding:15px; background:#f8f9ff;';
+    
+    // Build denominator options
+    let denominatorOptions = '<option value="">Sin denominador</option>';
+    if (denominatorsData) {
+        denominatorsData.headers.forEach((header, idx) => {
+            if (idx !== denominatorsData.fechaIdx && header) {
+                denominatorOptions += `<option value="${idx}">${header}</option>`;
+            }
+        });
+    }
+    
+    groupDiv.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <input type="text" value="${group.name}" onchange="updateGroupName(${group.id}, this.value)" 
+                   style="font-size:16px; font-weight:600; color:#667eea; border:none; background:transparent; border-bottom:2px solid #667eea; padding:5px;">
+            <button onclick="deleteGroup(${group.id})" style="background:#dc3545; padding:5px 10px; font-size:12px;">🗑️ Eliminar</button>
+        </div>
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
+            <div class="control-group">
+                <label>Columna de Denominador:</label>
+                <select id="denominator-${group.id}" onchange="updateGroupDenominator(${group.id}, this.value)">
+                    ${denominatorOptions}
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Factor de Amplificación:</label>
+                <input type="number" id="ampfactor-${group.id}" value="${group.amplificationFactor}" min="1" 
+                       onchange="updateGroupAmpFactor(${group.id}, this.value)"
+                       style="padding:10px; border:1px solid #ddd; border-radius:5px; width:100%;">
+            </div>
+        </div>
+        
+        <div style="min-height:60px; border:2px dashed #667eea; border-radius:8px; padding:10px; background:white;"
+             ondragover="event.preventDefault(); this.style.background='#e7f3ff';"
+             ondragleave="this.style.background='white';"
+             ondrop="dropServiceToGroup(event, ${group.id}); this.style.background='white';">
+            <div id="group-services-${group.id}" style="display:flex; flex-wrap:wrap; gap:8px;">
+                ${group.services.length === 0 ? '<span style="color:#999; font-style:italic;">Arrastra servicios aquí o haz clic en ellos</span>' : ''}
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(groupDiv);
+    
+    // Render existing services in group
+    group.services.forEach(service => {
+        addServiceBtnToGroup(group.id, service);
+    });
+}
+
+function addServiceBtnToGroup(groupId, serviceName) {
+    const container = document.getElementById(`group-services-${groupId}`);
+    
+    // Remove placeholder text if exists
+    const placeholder = container.querySelector('span');
+    if (placeholder) placeholder.remove();
+    
+    const btn = document.createElement('button');
+    btn.textContent = serviceName + ' ✕';
+    btn.style.cssText = 'padding:6px 10px; background:#667eea; color:white; border:none; border-radius:5px; cursor:pointer; font-size:12px;';
+    btn.onclick = () => removeServiceFromGroup(groupId, serviceName);
+    container.appendChild(btn);
+}
+
+function dropServiceToGroup(event, groupId) {
+    event.preventDefault();
+    const serviceName = event.dataTransfer.getData('text/plain');
+    addServiceToGroup(groupId, serviceName);
+}
+
+function addServiceToGroup(groupId, serviceName) {
+    const group = serviceGroups.find(g => g.id === groupId);
+    if (!group || group.services.includes(serviceName)) return;
+    
+    // Check if service is in another group
+    serviceGroups.forEach(g => {
+        const idx = g.services.indexOf(serviceName);
+        if (idx > -1) {
+            g.services.splice(idx, 1);
+            rerenderGroupServices(g.id);
+        }
+    });
+    
+    group.services.push(serviceName);
+    addServiceBtnToGroup(groupId, serviceName);
+    updateUngroupedServices();
+}
+
+function addServiceToLastGroup(serviceName) {
+    if (serviceGroups.length === 0) {
+        const newGroupId = createNewGroup();
+        addServiceToGroup(newGroupId, serviceName);
+    } else {
+        const lastGroup = serviceGroups[serviceGroups.length - 1];
+        addServiceToGroup(lastGroup.id, serviceName);
+    }
+}
+
+function removeServiceFromGroup(groupId, serviceName) {
+    const group = serviceGroups.find(g => g.id === groupId);
+    if (!group) return;
+    
+    const idx = group.services.indexOf(serviceName);
+    if (idx > -1) {
+        group.services.splice(idx, 1);
+        rerenderGroupServices(groupId);
+        updateUngroupedServices();
+    }
+}
+
+function rerenderGroupServices(groupId) {
+    const group = serviceGroups.find(g => g.id === groupId);
+    const container = document.getElementById(`group-services-${groupId}`);
+    if (!container || !group) return;
+    
+    container.innerHTML = '';
+    
+    if (group.services.length === 0) {
+        container.innerHTML = '<span style="color:#999; font-style:italic;">Arrastra servicios aquí o haz clic en ellos</span>';
+    } else {
+        group.services.forEach(service => {
+            addServiceBtnToGroup(groupId, service);
+        });
+    }
+}
+
+function updateUngroupedServices() {
+    const ungrouped = getUngroupedServices();
+    renderUngroupedServices(ungrouped);
+}
+
+function updateGroupName(groupId, newName) {
+    const group = serviceGroups.find(g => g.id === groupId);
+    if (group) group.name = newName;
+}
+
+function updateGroupDenominator(groupId, columnIndex) {
+    const group = serviceGroups.find(g => g.id === groupId);
+    if (group) group.denominatorColumn = columnIndex === '' ? '' : parseInt(columnIndex);
+}
+
+function updateGroupAmpFactor(groupId, factor) {
+    const group = serviceGroups.find(g => g.id === groupId);
+    if (group) group.amplificationFactor = parseInt(factor) || 1000;
+}
+
+function deleteGroup(groupId) {
+    const idx = serviceGroups.findIndex(g => g.id === groupId);
+    if (idx > -1) {
+        serviceGroups.splice(idx, 1);
+        const groupDiv = document.getElementById(`group-${groupId}`);
+        if (groupDiv) groupDiv.remove();
+        updateUngroupedServices();
+    }
+}
+
+function autoCreateGroups() {
+    // Clear existing groups
+    serviceGroups = [];
+    groupIdCounter = 0;
+    document.getElementById('serviceGroupsContainer').innerHTML = '';
+    
+    const inBox = document.getElementById('servicesInAnalysis');
+    const selectedServices = Array.from(inBox.querySelectorAll('button')).map(btn => btn.textContent);
+    
+    selectedServices.forEach(service => {
+        const groupId = createNewGroup(service);
+        addServiceToGroup(groupId, service);
+    });
+    
+    updateUngroupedServices();
+}
+
+function getDenominatorValueForPeriod(period, denominatorColumnIndex) {
+    if (!denominatorsData || denominatorColumnIndex === '' || denominatorColumnIndex === null) return 0;
+    
+    const periodType = document.getElementById('periodType').value;
+    
+    // Sum all denominators that fall within this period
+    let totalDenominator = 0;
+    
+    for (let row of denominatorsData.rows) {
+        const fechaValue = row[denominatorsData.fechaIdx];
+        if (!fechaValue) continue;
+        
+        const date = parseDate(fechaValue);
+        if (!date) continue;
+        
+        const rowPeriod = getPeriodKey(date, periodType);
+        
+        if (rowPeriod === period) {
+            const denomValue = parseFloat(row[denominatorColumnIndex]);
+            if (!isNaN(denomValue)) {
+                totalDenominator += denomValue;
+            }
+        }
+    }
+    
+    return totalDenominator;
+}
+
+function generateAnalysisWithRates() {
+    try {
+        // Validate groups
+        const groupsWithServices = serviceGroups.filter(g => g.services.length > 0);
+        
+        if (groupsWithServices.length === 0) {
+            showError('Debes crear al menos un grupo con servicios.');
+            return;
+        }
+        
+        showLoading('Generando análisis con tasas...');
+        
+        const periodType = document.getElementById('periodType').value;
+        const dateType = document.querySelector('input[name="dateType"]:checked').value;
+        const crossYearEnabled = document.getElementById('crossYearComparison').checked;
+        
+        let selectedPeriods = [];
+        if (crossYearEnabled) {
+            const selectedPeriod = document.getElementById('crossYearPeriod').value;
+            const selectedYears = Array.from(document.querySelectorAll('#yearCheckboxes input:checked')).map(cb => cb.value);
+            selectedPeriods = allPeriods.filter(p => {
+                const parts = p.split('-');
+                return parts.length > 1 && parts[1] === selectedPeriod && selectedYears.includes(parts[0]);
+            });
+        } else {
+            const startIdx = parseInt(document.getElementById('periodSliderStart').value);
+            const endIdx = parseInt(document.getElementById('periodSliderEnd').value);
+            selectedPeriods = allPeriods.slice(startIdx, endIdx + 1);
+        }
+        
+        const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
+        const serviceCol = columnIndices.serviceVerified;
+        
+        // Build results data structure
+        const ratesData = {
+            periods: selectedPeriods,
+            groups: groupsWithServices.map(group => ({
+                id: group.id,
+                name: group.name,
+                services: group.services,
+                denominatorColumn: group.denominatorColumn,
+                amplificationFactor: group.amplificationFactor,
+                periodData: {}
+            }))
+        };
+        
+        // Calculate counts and rates for each group and period
+        selectedPeriods.forEach(period => {
+            ratesData.groups.forEach(group => {
+                // Count events for all services in this group
+                let eventCount = 0;
+                
+                cleanedData.uniqueRows.forEach(row => {
+                    const dateStr = row[dateColIndex];
+                    const date = parseDate(dateStr);
+                    const rowPeriod = getPeriodKey(date, periodType);
+                    
+                    if (rowPeriod !== period) return;
+                    
+                    const service = String(row[serviceCol] || '').trim();
+                    if (group.services.includes(service)) {
+                        eventCount++;
+                    }
+                });
+                
+                // Get denominator value
+                const denomValue = getDenominatorValueForPeriod(period, group.denominatorColumn);
+                
+                // Calculate rate
+                let rate = null;
+                if (denomValue > 0 && group.denominatorColumn !== '') {
+                    rate = (eventCount / denomValue) * group.amplificationFactor;
+                }
+                
+                group.periodData[period] = {
+                    count: eventCount,
+                    denominator: denomValue,
+                    rate: rate
+                };
+            });
+        });
+        
+        displayRatesResults(ratesData);
+        hideLoading();
+        
+    } catch (error) {
+        hideLoading();
+        showError(`Error al generar análisis: ${error.message}`);
+    }
+}
+
+function displayRatesResults(ratesData) {
+    const { periods, groups } = ratesData;
+    
+    let tableHtml = `
+        <div class="step collapsible-section">
+            <h2 onclick="toggleSection('ratesAnalysisTable')" style="cursor:pointer;">
+                <span id="icon-ratesAnalysisTable">▼</span> Análisis de Tasas por Grupo de Servicios
+            </h2>
+            <div id="ratesAnalysisTable" class="section-content">
+                <div class="preview">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Período</th>
+    `;
+    
+    // Add column headers for each group (Count, Denominator, Rate)
+    groups.forEach(group => {
+        const sanitizedName = group.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        tableHtml += `
+            <th style="text-align:center;">${sanitizedName}<br><small>Eventos</small></th>
+            <th style="text-align:center;">${sanitizedName}<br><small>Denominador</small></th>
+            <th style="text-align:center;">${sanitizedName}<br><small>Tasa (×${group.amplificationFactor})</small></th>
+        `;
+    });
+    
+    tableHtml += `</tr></thead><tbody>`;
+    
+    // Add data rows
+    periods.forEach(period => {
+        tableHtml += `<tr><td><strong>${period}</strong></td>`;
+        
+        groups.forEach(group => {
+            const data = group.periodData[period];
+            const rateDisplay = data.rate !== null ? data.rate.toFixed(2) : '-';
+            const denomDisplay = data.denominator > 0 ? data.denominator : '-';
+            
+            tableHtml += `
+                <td style="text-align:center;">${data.count}</td>
+                <td style="text-align:center;">${denomDisplay}</td>
+                <td style="text-align:center; font-weight:bold; color:#667eea;">${rateDisplay}</td>
+            `;
+        });
+        
+        tableHtml += `</tr>`;
+    });
+    
+    // Add totals row
+    tableHtml += `<tr style="background:#f0f0f0; font-weight:bold;"><td>TOTAL / PROMEDIO</td>`;
+    
+    groups.forEach(group => {
+        let totalCount = 0;
+        let totalDenom = 0;
+        
+        periods.forEach(period => {
+            const data = group.periodData[period];
+            totalCount += data.count;
+            totalDenom += data.denominator;
+        });
+        
+        const avgRate = totalDenom > 0 ? ((totalCount / totalDenom) * group.amplificationFactor).toFixed(2) : '-';
+        
+        tableHtml += `
+            <td style="text-align:center;">${totalCount}</td>
+            <td style="text-align:center;">${totalDenom > 0 ? totalDenom : '-'}</td>
+            <td style="text-align:center; color:#667eea;">${avgRate}</td>
+        `;
+    });
+    
+    tableHtml += `</tr></tbody></table></div></div></div>`;
+    
+    // Add group composition info
+    tableHtml += `
+        <div class="step collapsible-section">
+            <h2 onclick="toggleSection('groupComposition')" style="cursor:pointer;">
+                <span id="icon-groupComposition">▼</span> Composición de Grupos
+            </h2>
+            <div id="groupComposition" class="section-content" style="display:none;">
+    `;
+    
+    groups.forEach(group => {
+        const denomName = group.denominatorColumn !== '' && denominatorsData 
+            ? denominatorsData.headers[group.denominatorColumn] 
+            : 'Sin denominador';
+        
+        tableHtml += `
+            <div style="background:#f8f9fa; padding:15px; margin-bottom:10px; border-radius:8px; border-left:4px solid #667eea;">
+                <strong>${group.name}</strong><br>
+                <small>Denominador: ${denomName} | Factor: ×${group.amplificationFactor}</small><br>
+                <small>Servicios: ${group.services.join(', ')}</small>
+            </div>
+        `;
+    });
+    
+    tableHtml += `</div></div>`;
+    
+    document.getElementById('resultsStep').style.display = 'block';
+    document.getElementById('previewContainer').innerHTML = tableHtml;
+    
+    // Store results for export
+    analysisResults = {
+        ratesData: ratesData,
+        type: 'rates'
+    };
+    
+    document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
+}
 function showCopiedNotification(message) {
             const notification = document.createElement('div');
             notification.className = 'copied-notification';
