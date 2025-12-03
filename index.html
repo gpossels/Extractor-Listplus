@@ -2463,20 +2463,13 @@ function getDenominatorValueForPeriod(period, denominatorColumnIndex) {
 
 function generateAnalysisWithRates() {
     try {
-        // Validate groups
-        const groupsWithServices = serviceGroups.filter(g => g.services.length > 0);
-        
-        if (groupsWithServices.length === 0) {
-            showError('Debes crear al menos un grupo con servicios.');
-            return;
-        }
-        
         showLoading('Generando análisis con tasas...');
         
         const periodType = document.getElementById('periodType').value;
         const dateType = document.querySelector('input[name="dateType"]:checked').value;
         const crossYearEnabled = document.getElementById('crossYearComparison').checked;
         
+        // Get selected periods
         let selectedPeriods = [];
         if (crossYearEnabled) {
             const selectedPeriod = document.getElementById('crossYearPeriod').value;
@@ -2491,26 +2484,70 @@ function generateAnalysisWithRates() {
             selectedPeriods = allPeriods.slice(startIdx, endIdx + 1);
         }
         
+        // Get selected category and subcategories
+        const selectedCategory = document.getElementById('crossCategory').value;
+        const subcategoriesInBox = document.getElementById('subcategoriesInAnalysis');
+        const selectedSubcategories = Array.from(subcategoriesInBox.querySelectorAll('button')).map(btn => btn.textContent);
+        
+        if (selectedSubcategories.length === 0) {
+            hideLoading();
+            showError('Debes tener al menos una subcategoría en "En análisis".');
+            return;
+        }
+        
         const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
         const serviceCol = columnIndices.serviceVerified;
+        const categoryColIndex = getCategoryColumnIndex(selectedCategory);
+        
+        // Build complete list of groups (explicit groups + ungrouped services as individual groups)
+        const allGroups = [];
+        
+        // Add explicit groups
+        serviceGroups.forEach(group => {
+            if (group.services.length > 0) {
+                allGroups.push({
+                    id: group.id,
+                    name: group.name,
+                    services: group.services,
+                    denominatorColumn: group.denominatorColumn,
+                    amplificationFactor: group.amplificationFactor
+                });
+            }
+        });
+        
+        // Add ungrouped services as individual groups
+        const ungrouped = getUngroupedServices();
+        ungrouped.forEach(service => {
+            allGroups.push({
+                id: `ungrouped-${service}`,
+                name: service,
+                services: [service],
+                denominatorColumn: '', // No denominator by default
+                amplificationFactor: 1000
+            });
+        });
+        
+        if (allGroups.length === 0) {
+            hideLoading();
+            showError('No hay grupos ni servicios para analizar.');
+            return;
+        }
         
         // Build results data structure
         const ratesData = {
             periods: selectedPeriods,
-            groups: groupsWithServices.map(group => ({
-                id: group.id,
-                name: group.name,
-                services: group.services,
-                denominatorColumn: group.denominatorColumn,
-                amplificationFactor: group.amplificationFactor,
+            selectedCategory: selectedCategory,
+            selectedSubcategories: selectedSubcategories,
+            groups: allGroups.map(group => ({
+                ...group,
                 periodData: {}
             }))
         };
         
-        // Calculate counts and rates for each group and period
+        // Calculate rates for each group and period
         selectedPeriods.forEach(period => {
             ratesData.groups.forEach(group => {
-                // Count events for all services in this group
+                // Count events matching selected subcategories for all services in this group
                 let eventCount = 0;
                 
                 cleanedData.uniqueRows.forEach(row => {
@@ -2521,7 +2558,11 @@ function generateAnalysisWithRates() {
                     if (rowPeriod !== period) return;
                     
                     const service = String(row[serviceCol] || '').trim();
-                    if (group.services.includes(service)) {
+                    if (!group.services.includes(service)) return;
+                    
+                    // Check if matches selected subcategory
+                    const categoryValue = String(row[categoryColIndex] || 'Sin información').trim() || 'Sin información';
+                    if (selectedSubcategories.includes(categoryValue)) {
                         eventCount++;
                     }
                 });
@@ -2552,15 +2593,32 @@ function generateAnalysisWithRates() {
     }
 }
 
-function displayRatesResults(ratesData) {
-    const { periods, groups } = ratesData;
+        function displayRatesResults(ratesData) {
+    const { periods, groups, selectedCategory, selectedSubcategories } = ratesData;
+    
+    const categoryNames = {
+        'classification': 'Clasificación',
+        'eventDimension': 'Dimensión de evento',
+        'eventType': 'Evento',
+        'vigilanceType': 'Tipo de vigilancia',
+        'consequences': 'Consecuencias en el paciente',
+        'reportingUnit': 'Unidad notificadora'
+    };
+    
+    // Build subcategory filter label
+    const subcatLabel = selectedSubcategories.length <= 3 
+        ? selectedSubcategories.join(', ') 
+        : `${selectedSubcategories.length} subcategorías`;
     
     let tableHtml = `
         <div class="step collapsible-section">
             <h2 onclick="toggleSection('ratesAnalysisTable')" style="cursor:pointer;">
-                <span id="icon-ratesAnalysisTable">▼</span> Análisis de Tasas por Grupo de Servicios
+                <span id="icon-ratesAnalysisTable">▼</span> Tasas por Grupo de Servicios
             </h2>
             <div id="ratesAnalysisTable" class="section-content">
+                <div style="background:#e7f3ff; padding:15px; margin-bottom:15px; border-radius:8px; border-left:4px solid #2196F3;">
+                    <strong>Filtro aplicado:</strong> ${categoryNames[selectedCategory]} → ${subcatLabel}
+                </div>
                 <div class="preview">
                     <table>
                         <thead>
@@ -2568,39 +2626,42 @@ function displayRatesResults(ratesData) {
                                 <th>Período</th>
     `;
     
-    // Add column headers for each group (Count, Denominator, Rate)
+    // Add column headers for each group (only rate)
     groups.forEach(group => {
         const sanitizedName = group.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        tableHtml += `
-            <th style="text-align:center;">${sanitizedName}<br><small>Eventos</small></th>
-            <th style="text-align:center;">${sanitizedName}<br><small>Denominador</small></th>
-            <th style="text-align:center;">${sanitizedName}<br><small>Tasa (×${group.amplificationFactor})</small></th>
-        `;
+        const hasdenominator = group.denominatorColumn !== '';
+        const factorLabel = hasdenominator ? `×${group.amplificationFactor}` : 'sin denom.';
+        tableHtml += `<th style="text-align:center;">${sanitizedName}<br><small>(${factorLabel})</small><button class="copy-btn" onclick="copyRatesColumn(event, '${group.id}')">copiar</button></th>`;
     });
     
     tableHtml += `</tr></thead><tbody>`;
     
     // Add data rows
     periods.forEach(period => {
-        tableHtml += `<tr><td><strong>${period}</strong></td>`;
+        const escapedPeriod = String(period).replace(/'/g, "\\'");
+        tableHtml += `<tr data-rates-row="${escapedPeriod}"><td><strong>${period}</strong><button class="row-copy-btn" onclick="copyRatesRow(event, '${escapedPeriod}')">copiar</button></td>`;
         
         groups.forEach(group => {
             const data = group.periodData[period];
-            const rateDisplay = data.rate !== null ? data.rate.toFixed(2) : '-';
-            const denomDisplay = data.denominator > 0 ? data.denominator : '-';
+            let rateDisplay;
             
-            tableHtml += `
-                <td style="text-align:center;">${data.count}</td>
-                <td style="text-align:center;">${denomDisplay}</td>
-                <td style="text-align:center; font-weight:bold; color:#667eea;">${rateDisplay}</td>
-            `;
+            if (group.denominatorColumn === '') {
+                // No denominator - show count instead
+                rateDisplay = `<span style="color:#999;" title="Sin denominador">${data.count}</span>`;
+            } else if (data.rate !== null) {
+                rateDisplay = `<span style="font-weight:bold; color:#667eea;">${data.rate.toFixed(2)}</span>`;
+            } else {
+                rateDisplay = '-';
+            }
+            
+            tableHtml += `<td style="text-align:center;" data-rates-col="${group.id}">${rateDisplay}</td>`;
         });
         
         tableHtml += `</tr>`;
     });
     
-    // Add totals row
-    tableHtml += `<tr style="background:#f0f0f0; font-weight:bold;"><td>TOTAL / PROMEDIO</td>`;
+    // Add totals/average row
+    tableHtml += `<tr style="background:#f0f0f0; font-weight:bold;"><td>PROMEDIO</td>`;
     
     groups.forEach(group => {
         let totalCount = 0;
@@ -2612,13 +2673,17 @@ function displayRatesResults(ratesData) {
             totalDenom += data.denominator;
         });
         
-        const avgRate = totalDenom > 0 ? ((totalCount / totalDenom) * group.amplificationFactor).toFixed(2) : '-';
+        let avgDisplay;
+        if (group.denominatorColumn === '') {
+            avgDisplay = `<span style="color:#999;">${totalCount}</span>`;
+        } else if (totalDenom > 0) {
+            const avgRate = (totalCount / totalDenom) * group.amplificationFactor;
+            avgDisplay = `<span style="color:#667eea;">${avgRate.toFixed(2)}</span>`;
+        } else {
+            avgDisplay = '-';
+        }
         
-        tableHtml += `
-            <td style="text-align:center;">${totalCount}</td>
-            <td style="text-align:center;">${totalDenom > 0 ? totalDenom : '-'}</td>
-            <td style="text-align:center; color:#667eea;">${avgRate}</td>
-        `;
+        tableHtml += `<td style="text-align:center;" data-rates-col="${group.id}">${avgDisplay}</td>`;
     });
     
     tableHtml += `</tr></tbody></table></div></div></div>`;
@@ -2637,9 +2702,12 @@ function displayRatesResults(ratesData) {
             ? denominatorsData.headers[group.denominatorColumn] 
             : 'Sin denominador';
         
+        const isUngrouped = String(group.id).startsWith('ungrouped-');
+        const borderColor = isUngrouped ? '#ffc107' : '#667eea';
+        
         tableHtml += `
-            <div style="background:#f8f9fa; padding:15px; margin-bottom:10px; border-radius:8px; border-left:4px solid #667eea;">
-                <strong>${group.name}</strong><br>
+            <div style="background:#f8f9fa; padding:15px; margin-bottom:10px; border-radius:8px; border-left:4px solid ${borderColor};">
+                <strong>${group.name}</strong>${isUngrouped ? ' <small>(sin agrupar)</small>' : ''}<br>
                 <small>Denominador: ${denomName} | Factor: ×${group.amplificationFactor}</small><br>
                 <small>Servicios: ${group.services.join(', ')}</small>
             </div>
@@ -2651,6 +2719,27 @@ function displayRatesResults(ratesData) {
     document.getElementById('resultsStep').style.display = 'block';
     document.getElementById('previewContainer').innerHTML = tableHtml;
     
+    // Update stats
+    const totalEvents = groups.reduce((sum, g) => {
+        return sum + periods.reduce((s, p) => s + g.periodData[p].count, 0);
+    }, 0);
+    
+    const statsHtml = `
+        <div class="stat-card">
+            <div class="stat-value">${totalEvents}</div>
+            <div class="stat-label">Total Eventos (filtrados)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${periods.length}</div>
+            <div class="stat-label">Períodos Analizados</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${groups.length}</div>
+            <div class="stat-label">Grupos/Servicios</div>
+        </div>
+    `;
+    document.getElementById('statsContainer').innerHTML = statsHtml;
+    
     // Store results for export
     analysisResults = {
         ratesData: ratesData,
@@ -2659,6 +2748,54 @@ function displayRatesResults(ratesData) {
     
     document.getElementById('resultsStep').scrollIntoView({ behavior: 'smooth' });
 }
+function copyRatesColumn(event, groupId) {
+    event.stopPropagation();
+    
+    try {
+        const cells = document.querySelectorAll(`td[data-rates-col="${groupId}"]`);
+        const values = Array.from(cells).slice(0, -1).map(cell => {
+            const span = cell.querySelector('span');
+            return span ? span.textContent.trim() : cell.textContent.trim();
+        });
+        const text = values.join('\n');
+        
+        navigator.clipboard.writeText(text).then(() => {
+            showCopiedNotification('Columna copiada');
+        }).catch(err => {
+            alert('Error al copiar: ' + err);
+        });
+    } catch (error) {
+        alert('Error al copiar columna: ' + error.message);
+    }
+}
+
+function copyRatesRow(event, rowName) {
+    event.stopPropagation();
+    
+    try {
+        const row = document.querySelector(`tr[data-rates-row="${rowName}"]`);
+        if (!row) {
+            alert('No se encontró la fila');
+            return;
+        }
+        
+        const cells = row.querySelectorAll('td');
+        const values = Array.from(cells).slice(1).map(cell => {
+            const span = cell.querySelector('span');
+            return span ? span.textContent.trim() : cell.textContent.trim();
+        });
+        const text = values.join('\t');
+        
+        navigator.clipboard.writeText(text).then(() => {
+            showCopiedNotification(`Fila "${rowName}" copiada`);
+        }).catch(err => {
+            alert('Error al copiar: ' + err);
+        });
+    } catch (error) {
+        alert('Error al copiar fila: ' + error.message);
+    }
+}
+        
 function showCopiedNotification(message) {
             const notification = document.createElement('div');
             notification.className = 'copied-notification';
