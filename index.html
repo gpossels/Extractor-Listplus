@@ -529,7 +529,10 @@
         <strong>ℹ️ Instrucciones:</strong> Agrupa servicios que comparten el mismo denominador. Luego asigna la columna de denominador y factor de amplificación a cada grupo.
     </div>
     
-    <div style="margin-bottom:20px;">
+    <div id="serviceGroupsContainer" style="display:flex; flex-direction:column; gap:20px;">
+    </div>
+    
+    <div style="margin:20px 0;">
         <button onclick="createNewGroup()" style="background:linear-gradient(135deg, #28a745 0%, #20c997 100%);">
             ➕ Crear Nuevo Grupo
         </button>
@@ -538,10 +541,7 @@
         </button>
     </div>
     
-    <div id="serviceGroupsContainer" style="display:flex; flex-direction:column; gap:20px;">
-    </div>
-    
-    <div style="margin-top:20px; padding:15px; background:#f8f9fa; border-radius:8px;">
+    <div style="padding:15px; background:#f8f9fa; border-radius:8px;">
         <h3 style="margin:0 0 15px 0; font-size:16px; color:#667eea;">Servicios sin agrupar:</h3>
         <div id="ungroupedServices" style="display:flex; flex-wrap:wrap; gap:8px;">
         </div>
