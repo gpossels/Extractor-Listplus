@@ -2205,7 +2205,7 @@ function renderUngroupedServices(services) {
         btn.textContent = service;
         btn.className = 'ungrouped-service-btn';
         btn.dataset.service = service;
-        btn.style.cssText = 'padding:8px 12px; background:#fff; border:1px solid #ddd; border-radius:5px; cursor:grab; font-size:13px; transition:all 0.2s;';
+        btn.style.cssText = 'padding:8px 12px; background:#fff; border:1px solid #ddd; border-radius:5px; cursor:grab; font-size:13px; transition:all 0.2s; color:#333;';
         btn.draggable = true;
         btn.ondragstart = (e) => {
             e.dataTransfer.setData('text/plain', service);
