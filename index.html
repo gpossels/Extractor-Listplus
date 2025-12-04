@@ -1946,27 +1946,14 @@ function addServiceToGroup(groupId, serviceName) {
     const group = serviceGroups.find(g => g.id === groupId);
     if (!group || group.services.includes(serviceName)) return;
     
-    // Remove from solo if present
-    const soloIdx = soloServices.indexOf(serviceName);
+    // Remove from solo if present (handle object-based solo services)
+    const soloIdx = soloServices.findIndex(s => 
+        (typeof s === 'object' ? s.name : s) === serviceName
+    );
     if (soloIdx > -1) {
         soloServices.splice(soloIdx, 1);
         renderSoloServices();
     }
-    
-    // Check if service is in another group
-    serviceGroups.forEach(g => {
-        const idx = g.services.indexOf(serviceName);
-        if (idx > -1) {
-            g.services.splice(idx, 1);
-            rerenderGroupServices(g.id);
-        }
-    });
-    
-    group.services.push(serviceName);
-    addServiceBtnToGroup(groupId, serviceName);
-    renderAvailableServices();
-}
-
 
 function removeServiceFromGroup(groupId, serviceName) {
     const group = serviceGroups.find(g => g.id === groupId);
