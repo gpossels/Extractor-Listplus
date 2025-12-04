@@ -728,7 +728,7 @@
             
             indices.eventDimension = findColumnIndex(headers, ['dimensión de evento', 'dimension de evento']);
             indices.consequences = findColumnIndex(headers, ['consecuencias en el paciente', 'consecuencias']);
-            
+            indices.reportingUnit = findColumnIndex(headers, ['unidad notificadora']);
             if (missing.length > 0) {
                 return {
                     valid: false,
@@ -1237,7 +1237,8 @@ function moveSubcategory(subcatName, direction) {
                 'eventDimension': columnIndices.eventDimension || findColumnIndex(cleanedData.headers, ['dimensión de evento', 'dimension de evento']),
                 'eventType': columnIndices.eventType,
                 'vigilanceType': columnIndices.vigilanceType,
-                'consequences': findColumnIndex(cleanedData.headers, ['consecuencias en el paciente', 'consecuencias'])
+                'consequences': findColumnIndex(cleanedData.headers, ['consecuencias en el paciente', 'consecuencias']),
+                'reportingUnit': columnIndices.reportingUnit || findColumnIndex(cleanedData.headers, ['unidad notificadora'])
             };
             return mapping[category];
         }
@@ -1479,48 +1480,6 @@ function processDenominatorsFile() {
 
 
         
-        if (jsonData.length < 2) {
-            hideLoading();
-            showError('El archivo de denominadores no contiene datos suficientes.');
-            return;
-        }
-
-        const headers = jsonData[0];
-        const rows = jsonData.slice(1);
-        
-        // Find Fecha column
-        const fechaIdx = headers.findIndex(h => 
-            String(h).trim().toLowerCase() === 'fecha'
-        );
-        
-        if (fechaIdx === -1) {
-            hideLoading();
-            showError('No se encontró la columna "Fecha" en el archivo de denominadores.');
-            return;
-        }
-
-        // Store denominators data
-        denominatorsData = {
-            headers: headers,
-            rows: rows,
-            fechaIdx: fechaIdx
-        };
-
-        const uploadArea = document.getElementById('denominatorsUploadArea');
-        uploadArea.classList.add('loaded');
-        document.getElementById('denominatorsUploadText').innerHTML = 
-            '✅ Denominadores cargados<br><small>' + rows.length + ' períodos</small>';
-        
-        const info = document.getElementById('fileInfo');
-        info.innerHTML += `<br><strong>Denominadores cargados:</strong><br>• Períodos: ${rows.length}<br>• Columnas de denominadores: ${headers.length - 1}`;
-        
-        hideLoading();
-
-    } catch (error) {
-        hideLoading();
-        showError(`Error al procesar archivo de denominadores: ${error.message}`);
-    }
-}
         
 function parseDate(dateStr) {
     if (dateStr == null || dateStr === '') return null;
