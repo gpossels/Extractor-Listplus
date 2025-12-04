@@ -980,11 +980,16 @@ function getSelectedServices() {
     serviceGroups.forEach(group => {
         group.services.forEach(s => groupedServices.push(s));
     });
-    return [...groupedServices, ...soloServices];
+    const soloNames = soloServices.map(s => typeof s === 'object' ? s.name : s);
+    return [...groupedServices, ...soloNames];
 }
 
 function addServiceAsSolo(serviceName) {
-    if (soloServices.includes(serviceName)) return;
+    // Check if already in solo (by name)
+    const existingIdx = soloServices.findIndex(s => 
+        (typeof s === 'object' ? s.name : s) === serviceName
+    );
+    if (existingIdx > -1) return;
     
     // Remove from groups if present
     serviceGroups.forEach(g => {
@@ -995,13 +1000,34 @@ function addServiceAsSolo(serviceName) {
         }
     });
     
-    soloServices.push(serviceName);
+    // Add as object with denominator and factor
+    soloServices.push({
+        name: serviceName,
+        denominatorColumn: '',
+        amplificationFactor: 1000
+    });
     renderAvailableServices();
     renderSoloServices();
 }
 
-function removeServiceFromSolo(serviceName) {
-    const idx = soloServices.indexOf(serviceName);
+function updateSoloDenominator(serviceName, columnIndex) {
+    const solo = soloServices.find(s => (typeof s === 'object' ? s.name : s) === serviceName);
+    if (solo && typeof solo === 'object') {
+        solo.denominatorColumn = columnIndex === '' ? '' : parseInt(columnIndex);
+    }
+}
+
+function updateSoloAmpFactor(serviceName, factor) {
+    const solo = soloServices.find(s => (typeof s === 'object' ? s.name : s) === serviceName);
+    if (solo && typeof solo === 'object') {
+        solo.amplificationFactor = parseInt(factor) || 1000;
+    }
+}
+
+        function removeServiceFromSolo(serviceName) {
+    const idx = soloServices.findIndex(s => 
+        (typeof s === 'object' ? s.name : s) === serviceName
+    );
     if (idx > -1) {
         soloServices.splice(idx, 1);
         renderAvailableServices();
@@ -1018,12 +1044,37 @@ function renderSoloServices() {
         return;
     }
     
-    soloServices.forEach(service => {
-        const btn = document.createElement('button');
-        btn.textContent = service + ' ✕';
-        btn.style.cssText = 'padding:6px 10px; background:#4caf50; color:white; border:none; border-radius:5px; cursor:pointer; font-size:12px;';
-        btn.onclick = () => removeServiceFromSolo(service);
-        container.appendChild(btn);
+    // Build denominator options
+    let denominatorOptions = '<option value="">Sin denominador</option>';
+    if (denominatorsData) {
+        denominatorsData.headers.forEach((header, idx) => {
+            if (idx !== denominatorsData.fechaIdx && header) {
+                denominatorOptions += `<option value="${idx}">${header}</option>`;
+            }
+        });
+    }
+    
+    soloServices.forEach(solo => {
+        const serviceName = typeof solo === 'object' ? solo.name : solo;
+        const currentDenom = typeof solo === 'object' ? solo.denominatorColumn : '';
+        const currentFactor = typeof solo === 'object' ? solo.amplificationFactor : 1000;
+        
+        const soloDiv = document.createElement('div');
+        soloDiv.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:10px; background:white; border:1px solid #4caf50; border-radius:8px; margin-bottom:8px;';
+        
+        soloDiv.innerHTML = `
+            <button onclick="removeServiceFromSolo('${serviceName.replace(/'/g, "\\'")}')" style="padding:4px 8px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer; font-size:11px;">✕</button>
+            <strong style="color:#4caf50; min-width:150px;">${serviceName}</strong>
+            <select onchange="updateSoloDenominator('${serviceName.replace(/'/g, "\\'")}', this.value)" style="padding:5px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+                ${denominatorOptions.replace(`value="${currentDenom}"`, `value="${currentDenom}" selected`)}
+            </select>
+            <div style="display:flex; align-items:center; gap:5px;">
+                <label style="font-size:12px; margin:0;">Factor:</label>
+                <input type="number" value="${currentFactor}" min="1" onchange="updateSoloAmpFactor('${serviceName.replace(/'/g, "\\'")}', this.value)" style="width:70px; padding:5px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+            </div>
+        `;
+        
+        container.appendChild(soloDiv);
     });
 }
 
@@ -2051,17 +2102,21 @@ function generateAnalysis() {
             }
         });
         
-        // Add solo services as individual entries
-        soloServices.forEach(service => {
-            allGroups.push({
-                id: `solo-${service}`,
-                name: service,
-                services: [service],
-                denominatorColumn: '',
-                amplificationFactor: 1000,
-                isGroup: false
-            });
-        });
+       // Add solo services as individual entries
+soloServices.forEach(solo => {
+    const serviceName = typeof solo === 'object' ? solo.name : solo;
+    const denomColumn = typeof solo === 'object' ? solo.denominatorColumn : '';
+    const ampFactor = typeof solo === 'object' ? solo.amplificationFactor : 1000;
+    
+    allGroups.push({
+        id: `solo-${serviceName}`,
+        name: serviceName,
+        services: [serviceName],
+        denominatorColumn: denomColumn,
+        amplificationFactor: ampFactor,
+        isGroup: false
+    });
+});
         
         if (allGroups.length === 0) {
             hideLoading();
