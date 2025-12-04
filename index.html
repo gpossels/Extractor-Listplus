@@ -1426,11 +1426,57 @@ function handleDenominatorsFile(e) {
 function processDenominatorsFile() {
     try {
         const firstSheet = denominatorsWorkbook.Sheets[denominatorsWorkbook.SheetNames[0]];
+        
+        // 👇 Opciones recomendadas
         const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
-    header: 1,
-    cellDates: true,
-    raw: false
-});
+            header: 1,
+            cellDates: true, // fechas como Date cuando se puede
+            raw: false       // convierte números de fecha a algo más legible (pero igual pasará por parseDate)
+        });
+        
+        if (jsonData.length < 2) {
+            hideLoading();
+            showError('El archivo de denominadores no contiene datos suficientes.');
+            return;
+        }
+
+        const headers = jsonData[0];
+        const rows = jsonData.slice(1);
+        
+        // Buscar columna "Fecha"
+        const fechaIdx = headers.findIndex(h => 
+            String(h).trim().toLowerCase() === 'fecha'
+        );
+        
+        if (fechaIdx === -1) {
+            hideLoading();
+            showError('No se encontró la columna "Fecha" en el archivo de denominadores.');
+            return;
+        }
+
+        // Guardar datos de denominadores
+        denominatorsData = {
+            headers: headers,
+            rows: rows,
+            fechaIdx: fechaIdx
+        };
+
+        const uploadArea = document.getElementById('denominatorsUploadArea');
+        uploadArea.classList.add('loaded');
+        document.getElementById('denominatorsUploadText').innerHTML = 
+            '✅ Denominadores cargados<br><small>' + rows.length + ' períodos</small>';
+        
+        const info = document.getElementById('fileInfo');
+        info.innerHTML += `<br><strong>Denominadores cargados:</strong><br>• Períodos: ${rows.length}<br>• Columnas de denominadores: ${headers.length - 1}`;
+        
+        hideLoading();
+
+    } catch (error) {
+        hideLoading();
+        showError(`Error al procesar archivo de denominadores: ${error.message}`);
+    }
+}
+
 
         
         if (jsonData.length < 2) {
@@ -1477,42 +1523,50 @@ function processDenominatorsFile() {
 }
         
 function parseDate(dateStr) {
-            if (!dateStr) return null;
-            
-            try {
-            
-            if (dateStr instanceof Date && !isNaN(dateStr)) {
-                return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate());
-            }
-            
-            const dateString = String(dateStr).trim();
-            
-            const match = dateString.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
-            if (match) {
-                const day = parseInt(match[1]);
-                const month = parseInt(match[2]) - 1;
-                const year = parseInt(match[3]);
-                
-                if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
-                    const date = new Date(year, month, day);
-                    // Validar que la fecha sea válida (evita 31 de febrero, etc.)
-                    if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
-                        return date;
-                    }
-                }
-            }
-            
-            const date = new Date(dateString);
-            if (!isNaN(date.getTime())) {
-                return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-            }
-            
-            return null;
-            } catch (error) {
-                console.warn('Error parsing date:', dateStr, error);
-                return null;
+    if (dateStr == null || dateStr === '') return null;
+
+    try {
+        // 1) Ya es Date
+        if (dateStr instanceof Date && !isNaN(dateStr)) {
+            return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate());
+        }
+
+        // 2) Es número → serial de Excel
+        if (typeof dateStr === 'number') {
+            const excelEpoch = new Date(1899, 11, 30); // 1899-12-30
+            const ms = excelEpoch.getTime() + dateStr * 86400000;
+            const d = new Date(ms);
+            if (!isNaN(d.getTime())) {
+                return new Date(d.getFullYear(), d.getMonth(), d.getDate());
             }
         }
+
+        // 3) Texto DD-MM-AAAA ó DD/MM/AAAA
+        const dateString = String(dateStr).trim();
+        const match = dateString.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+        if (match) {
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10) - 1;
+            const year = parseInt(match[3], 10);
+
+            const d = new Date(year, month, day);
+            if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+                return d;
+            }
+        }
+
+        // 4) Último intento con new Date
+        const dGeneric = new Date(dateString);
+        if (!isNaN(dGeneric.getTime())) {
+            return new Date(dGeneric.getFullYear(), dGeneric.getMonth(), dGeneric.getDate());
+        }
+
+        return null;
+    } catch (error) {
+        console.warn('Error parsing date:', dateStr, error);
+        return null;
+    }
+}
 
 function getWeekNumber(date) {
             const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
