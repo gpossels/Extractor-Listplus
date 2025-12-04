@@ -455,100 +455,86 @@
                 </div>
             </div>
             
-            <button onclick="showCrossAnalysisConfig()" style="width:100%; margin-top:15px;">Configurar Análisis</button>
-        </div>
+           <button onclick="showServiceGroupingStep()" style="width:100%; margin-top:15px;">Configurar Análisis</button>        </div>
         
-        <div class="step" id="crossAnalysisStep" style="display:none;">
-            <h2>Paso 3: Selección de Unidades</h2>
-            
-            <div style="margin-bottom:30px;">
-                <div style="display:grid; grid-template-columns:1fr 100px 1fr; gap:20px; align-items:start;">
-                    <div style="border:2px solid #dc3545; border-radius:8px; padding:15px; background:#fff0f0;">
-                        <h3 style="margin:0 0 15px 0; color:#dc3545; font-size:16px;">Fuera de análisis</h3>
-                        <div id="servicesOutAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
-                        </div>
-                    </div>
-                    
-                    <div style="display:flex; flex-direction:column; justify-content:center; gap:10px;">
-                        <button onclick="moveAllServices('toIn')" style="padding:8px; font-size:20px;" title="Mover todos a 'En análisis'">→</button>
-                        <button onclick="moveAllServices('toOut')" style="padding:8px; font-size:20px;" title="Mover todos a 'Fuera de análisis'">←</button>
-                    </div>
-                    
-                    <div style="border:2px solid #667eea; border-radius:8px; padding:15px; background:#f8f9fa;">
-                        <h3 style="margin:0 0 15px 0; color:#667eea; font-size:16px;">En análisis</h3>
-                        <div id="servicesInAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <h2 style="margin-top:30px;">Paso 4: Configurar Análisis</h2>
-            
-            <div class="control-group" style="margin-bottom:20px;">
-                <label>Categoría a Analizar (Columnas):</label>
-                <select id="crossCategory" onchange="loadSubcategoryBoxes()">
-                    <option value="">Seleccionar categoría...</option>
-                    <option value="classification">Clasificación</option>
-                    <option value="eventDimension">Dimensión de evento</option>
-                    <option value="eventType">Evento</option>
-                    <option value="vigilanceType">Tipo de vigilancia</option>
-                    <option value="consequences">Consecuencias en el paciente</option>
-                    <option value="reportingUnit">Unidad notificadora</option>
-                </select>
-            </div>
-            
-            <div id="subcategoryBoxesSection" style="display:none; margin-top:20px;">
-                <h3 style="font-size:16px; margin-bottom:15px;">Selección de Subcategorías:</h3>
-                <div style="display:grid; grid-template-columns:1fr 100px 1fr; gap:20px; align-items:start;">
-                    <div style="border:2px solid #dc3545; border-radius:8px; padding:15px; background:#fff0f0;">
-                        <h3 style="margin:0 0 15px 0; color:#dc3545; font-size:16px;">Fuera de análisis</h3>
-                        <div id="subcategoriesOutAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
-                        </div>
-                    </div>
-                    
-                    <div style="display:flex; flex-direction:column; justify-content:center; gap:10px;">
-                        <button onclick="moveAllSubcategories('toIn')" style="padding:8px; font-size:20px;" title="Mover todos a 'En análisis'">→</button>
-                        <button onclick="moveAllSubcategories('toOut')" style="padding:8px; font-size:20px;" title="Mover todos a 'Fuera de análisis'">←</button>
-                    </div>
-                    
-                    <div style="border:2px solid #667eea; border-radius:8px; padding:15px; background:#f8f9fa;">
-                        <h3 style="margin:0 0 15px 0; color:#667eea; font-size:16px;">En análisis</h3>
-                        <div id="subcategoriesInAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <button onclick="generateCrossAnalysis()" style="width:100%; margin-top:15px; background:linear-gradient(135deg, #28a745 0%, #20c997 100%);">🔍 Generar Análisis</button>
-        </div>
         
-        <div class="step" id="denominatorsStep" style="display:none;">
-    <h2>Paso 5: Agrupación de Servicios y Denominadores</h2>
+        
+        <div class="step" id="serviceGroupingStep" style="display:none;">
+    <h2>Paso 3: Selección y Agrupación de Servicios</h2>
     
     <div style="background:#fff3cd; padding:15px; margin-bottom:20px; border-radius:8px; border-left:4px solid #ffc107;">
-        <strong>ℹ️ Instrucciones:</strong> Agrupa servicios que comparten el mismo denominador. Luego asigna la columna de denominador y factor de amplificación a cada grupo.
+        <strong>ℹ️ Instrucciones:</strong> Los servicios disponibles aparecen abajo. Haz clic en un servicio para agregarlo como "solo" o arrástralo a un grupo. Solo los servicios seleccionados (en grupos o solos) serán incluidos en el análisis.
+    </div>
+    
+    <div style="padding:15px; background:#f8f9fa; border-radius:8px; margin-bottom:20px;">
+        <h3 style="margin:0 0 15px 0; font-size:16px; color:#666;">Servicios disponibles: <span id="availableServicesCount"></span></h3>
+        <div id="availableServices" style="display:flex; flex-wrap:wrap; gap:8px; max-height:200px; overflow-y:auto;">
+        </div>
     </div>
     
     <div id="serviceGroupsContainer" style="display:flex; flex-direction:column; gap:20px;">
     </div>
     
-    <div style="margin:20px 0;">
+    <div style="margin:20px 0; display:flex; gap:10px; flex-wrap:wrap;">
         <button onclick="createNewGroup()" style="background:linear-gradient(135deg, #28a745 0%, #20c997 100%);">
             ➕ Crear Nuevo Grupo
         </button>
-        <button onclick="autoCreateGroups()" style="background:linear-gradient(135deg, #6c757d 0%, #495057 100%); margin-left:10px;">
-            🔄 Auto-agrupar (1 servicio = 1 grupo)
+        <button onclick="addAllAsSolo()" style="background:linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
+            📋 Agregar todos como Solo
+        </button>
+        <button onclick="clearAllSelections()" style="background:linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+            🗑️ Limpiar selección
         </button>
     </div>
     
-    <div style="padding:15px; background:#f8f9fa; border-radius:8px;">
-        <h3 style="margin:0 0 15px 0; font-size:16px; color:#667eea;">Servicios sin agrupar:</h3>
-        <div id="ungroupedServices" style="display:flex; flex-wrap:wrap; gap:8px;">
+    <div id="soloServicesSection" style="padding:15px; background:#e8f5e9; border-radius:8px; border-left:4px solid #4caf50; margin-bottom:20px;">
+        <h3 style="margin:0 0 15px 0; font-size:16px; color:#4caf50;">Servicios Solo (sin agrupar):</h3>
+        <div id="soloServices" style="display:flex; flex-wrap:wrap; gap:8px;">
+            <span style="color:#666; font-style:italic;">Ningún servicio seleccionado como solo</span>
         </div>
     </div>
     
-    <button onclick="generateAnalysisWithRates()" style="width:100%; margin-top:20px; background:linear-gradient(135deg, #28a745 0%, #20c997 100%);">
-        📊 Generar Análisis con Tasas
+    <hr style="margin:25px 0; border:none; border-top:2px solid #667eea;">
+    
+    <h2 style="color:#667eea; margin-bottom:15px;">Paso 4: Configurar Análisis</h2>
+    
+    <div class="control-group" style="margin-bottom:20px;">
+        <label>Categoría a Analizar (Columnas):</label>
+        <select id="crossCategory" onchange="loadSubcategoryBoxes()">
+            <option value="">Seleccionar categoría...</option>
+            <option value="classification">Clasificación</option>
+            <option value="eventDimension">Dimensión de evento</option>
+            <option value="eventType">Evento</option>
+            <option value="vigilanceType">Tipo de vigilancia</option>
+            <option value="consequences">Consecuencias en el paciente</option>
+            <option value="reportingUnit">Unidad notificadora</option>
+        </select>
+    </div>
+    
+    <div id="subcategoryBoxesSection" style="display:none; margin-top:20px;">
+        <h3 style="font-size:16px; margin-bottom:15px;">Selección de Subcategorías:</h3>
+        <div style="display:grid; grid-template-columns:1fr 100px 1fr; gap:20px; align-items:start;">
+            <div style="border:2px solid #dc3545; border-radius:8px; padding:15px; background:#fff0f0;">
+                <h3 style="margin:0 0 15px 0; color:#dc3545; font-size:16px;">Fuera de análisis</h3>
+                <div id="subcategoriesOutAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
+                </div>
+            </div>
+            
+            <div style="display:flex; flex-direction:column; justify-content:center; gap:10px;">
+                <button onclick="moveAllSubcategories('toIn')" style="padding:8px; font-size:20px;" title="Mover todos a 'En análisis'">→</button>
+                <button onclick="moveAllSubcategories('toOut')" style="padding:8px; font-size:20px;" title="Mover todos a 'Fuera de análisis'">←</button>
+            </div>
+            
+            <div style="border:2px solid #667eea; border-radius:8px; padding:15px; background:#f8f9fa;">
+                <h3 style="margin:0 0 15px 0; color:#667eea; font-size:16px;">En análisis</h3>
+                <div id="subcategoriesInAnalysis" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:5px;">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <button onclick="generateAnalysis()" style="width:100%; margin-top:20px; background:linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+        🔍 Generar Análisis
     </button>
 </div>
         
@@ -816,66 +802,9 @@ info.innerHTML = `
             uniqueServices = Array.from(services).sort();
         }
 
-function buildServiceBoxes() {
-            const inBox = document.getElementById('servicesInAnalysis');
-            const outBox = document.getElementById('servicesOutAnalysis');
-            
-            inBox.innerHTML = '';
-            outBox.innerHTML = '';
-            
-            uniqueServices.forEach(service => {
-                const serviceBtn = document.createElement('button');
-                serviceBtn.textContent = service;
-                serviceBtn.className = 'service-item';
-                serviceBtn.style.cssText = 'padding:8px; text-align:left; background:white; border:1px solid #ddd; border-radius:5px; cursor:pointer; transition:all 0.2s; color:#333;';
-                serviceBtn.onmouseover = function() { this.style.background = '#ffe7e7'; };
-                serviceBtn.onmouseout = function() { this.style.background = 'white'; };
-                serviceBtn.onclick = function() { moveService(service, 'toIn'); };
-                outBox.appendChild(serviceBtn);
-            });
-        }        
-        function moveService(serviceName, direction) {
-            const inBox = document.getElementById('servicesInAnalysis');
-            const outBox = document.getElementById('servicesOutAnalysis');
-            
-            const allButtons = [...inBox.querySelectorAll('button'), ...outBox.querySelectorAll('button')];
-            const targetBtn = allButtons.find(btn => btn.textContent === serviceName);
-            
-            if (!targetBtn) return;
-            
-            if (direction === 'toOut') {
-                targetBtn.onclick = function() { moveService(serviceName, 'toIn'); };
-                outBox.appendChild(targetBtn);
-            } else {
-                targetBtn.onclick = function() { moveService(serviceName, 'toOut'); };
-                inBox.appendChild(targetBtn);
-            }
-        }
         
-        function moveAllServices(action) {
-            const inBox = document.getElementById('servicesInAnalysis');
-            const outBox = document.getElementById('servicesOutAnalysis');
-            
-            if (action === 'toOut') {
-                const buttons = Array.from(inBox.querySelectorAll('button'));
-                buttons.forEach(btn => {
-                    const serviceName = btn.textContent;
-                    btn.onclick = function() { moveService(serviceName, 'toIn'); };
-                    outBox.appendChild(btn);
-                });
-            } else if (action === 'toIn') {
-                const buttons = Array.from(outBox.querySelectorAll('button'));
-                buttons.forEach(btn => {
-                    const serviceName = btn.textContent;
-                    btn.onclick = function() { moveService(serviceName, 'toOut'); };
-                    inBox.appendChild(btn);
-                });
-            } else if (action === 'in') {
-                // Do nothing - all are already in by default
-            } else if (action === 'out') {
-                moveAllServices('toOut');
-            }
-        }
+        
+        
         
         function buildAllPeriods() {
                 const periodType = document.getElementById('periodType').value;
@@ -988,17 +917,139 @@ function buildServiceBoxes() {
             });
         }
         
-        function showCrossAnalysisConfig() {
-            if (!cleanedData) {
-                showError('Primero debes cargar un archivo.');
-                return;
-            }
-            
-            buildServiceBoxes();
-            
-            document.getElementById('crossAnalysisStep').style.display = 'block';
-            document.getElementById('crossAnalysisStep').scrollIntoView({ behavior: 'smooth' });
+        function showServiceGroupingStep() {
+    if (!cleanedData) {
+        showError('Primero debes cargar un archivo.');
+        return;
+    }
+    
+    initializeServiceSelection();
+    
+    document.getElementById('serviceGroupingStep').style.display = 'block';
+    document.getElementById('serviceGroupingStep').scrollIntoView({ behavior: 'smooth' });
+}
+
+let soloServices = [];
+
+function initializeServiceSelection() {
+    serviceGroups = [];
+    soloServices = [];
+    groupIdCounter = 0;
+    
+    document.getElementById('serviceGroupsContainer').innerHTML = '';
+    renderAvailableServices();
+    renderSoloServices();
+}
+
+function renderAvailableServices() {
+    const container = document.getElementById('availableServices');
+    container.innerHTML = '';
+    
+    const selectedServices = getSelectedServices();
+    const available = uniqueServices.filter(s => !selectedServices.includes(s));
+    
+    document.getElementById('availableServicesCount').textContent = `(${available.length} de ${uniqueServices.length})`;
+    
+    if (available.length === 0) {
+        container.innerHTML = '<span style="color:#666; font-style:italic;">Todos los servicios han sido seleccionados</span>';
+        return;
+    }
+    
+    available.forEach(service => {
+        const btn = document.createElement('button');
+        btn.textContent = service;
+        btn.dataset.service = service;
+        btn.style.cssText = 'padding:8px 12px; background:#fff; border:1px solid #ddd; border-radius:5px; cursor:pointer; font-size:13px; transition:all 0.2s; color:#333;';
+        btn.draggable = true;
+        btn.onmouseover = function() { this.style.background = '#e3f2fd'; this.style.borderColor = '#2196F3'; };
+        btn.onmouseout = function() { this.style.background = '#fff'; this.style.borderColor = '#ddd'; };
+        btn.ondragstart = (e) => {
+            e.dataTransfer.setData('text/plain', service);
+            btn.style.opacity = '0.5';
+        };
+        btn.ondragend = () => {
+            btn.style.opacity = '1';
+        };
+        btn.onclick = () => addServiceAsSolo(service);
+        container.appendChild(btn);
+    });
+}
+
+function getSelectedServices() {
+    const groupedServices = [];
+    serviceGroups.forEach(group => {
+        group.services.forEach(s => groupedServices.push(s));
+    });
+    return [...groupedServices, ...soloServices];
+}
+
+function addServiceAsSolo(serviceName) {
+    if (soloServices.includes(serviceName)) return;
+    
+    // Remove from groups if present
+    serviceGroups.forEach(g => {
+        const idx = g.services.indexOf(serviceName);
+        if (idx > -1) {
+            g.services.splice(idx, 1);
+            rerenderGroupServices(g.id);
         }
+    });
+    
+    soloServices.push(serviceName);
+    renderAvailableServices();
+    renderSoloServices();
+}
+
+function removeServiceFromSolo(serviceName) {
+    const idx = soloServices.indexOf(serviceName);
+    if (idx > -1) {
+        soloServices.splice(idx, 1);
+        renderAvailableServices();
+        renderSoloServices();
+    }
+}
+
+function renderSoloServices() {
+    const container = document.getElementById('soloServices');
+    container.innerHTML = '';
+    
+    if (soloServices.length === 0) {
+        container.innerHTML = '<span style="color:#666; font-style:italic;">Ningún servicio seleccionado como solo</span>';
+        return;
+    }
+    
+    soloServices.forEach(service => {
+        const btn = document.createElement('button');
+        btn.textContent = service + ' ✕';
+        btn.style.cssText = 'padding:6px 10px; background:#4caf50; color:white; border:none; border-radius:5px; cursor:pointer; font-size:12px;';
+        btn.onclick = () => removeServiceFromSolo(service);
+        container.appendChild(btn);
+    });
+}
+
+function addAllAsSolo() {
+    const selectedServices = getSelectedServices();
+    const available = uniqueServices.filter(s => !selectedServices.includes(s));
+    
+    available.forEach(service => {
+        if (!soloServices.includes(service)) {
+            soloServices.push(service);
+        }
+    });
+    
+    renderAvailableServices();
+    renderSoloServices();
+}
+
+function clearAllSelections() {
+    serviceGroups = [];
+    soloServices = [];
+    groupIdCounter = 0;
+    
+    document.getElementById('serviceGroupsContainer').innerHTML = '';
+    renderAvailableServices();
+    renderSoloServices();
+}
         
         function loadSubcategoryBoxes() {
             const category = document.getElementById('crossCategory').value;
@@ -1116,94 +1167,7 @@ function moveSubcategory(subcatName, direction) {
             return mapping[category];
         }
         
-        function generateCrossAnalysis() {
-            try {
-                showLoading('Generando análisis...');
-                
-                const crossCategory = document.getElementById('crossCategory').value;
-                const periodType = document.getElementById('periodType').value;
-                const dateType = document.querySelector('input[name="dateType"]:checked').value;
-                const crossYearEnabled = document.getElementById('crossYearComparison').checked;
-                
-                let selectedPeriods = [];
-                
-                if (crossYearEnabled) {
-                    const selectedPeriod = document.getElementById('crossYearPeriod').value;
-                    const selectedYears = Array.from(document.querySelectorAll('#yearCheckboxes input:checked')).map(cb => cb.value);
-                    
-                    selectedPeriods = allPeriods.filter(p => {
-                        const parts = p.split('-');
-                        return parts.length > 1 && parts[1] === selectedPeriod && selectedYears.includes(parts[0]);
-                    });
-                } else {
-                    const startIdx = parseInt(document.getElementById('periodSliderStart').value);
-                    const endIdx = parseInt(document.getElementById('periodSliderEnd').value);
-                    selectedPeriods = allPeriods.slice(startIdx, endIdx + 1);
-                }
-                
-                const inBox = document.getElementById('servicesInAnalysis');
-                const selectedServices = Array.from(inBox.querySelectorAll('button')).map(btn => btn.textContent);
-                
-                if (selectedServices.length === 0) {
-                    hideLoading();
-                    showError('Debes tener al menos un servicio en "En análisis".');
-                    return;
-                }
-                
-                // Get selected category from dropdown
-                const selectedCategory = document.getElementById('crossCategory').value;
-                if (!selectedCategory) {
-                    hideLoading();
-                    showError('Debes seleccionar una categoría a analizar.');
-                    return;
-                }
-                
-                // Get selected subcategories from "En análisis" box
-                const subcategoriesInBox = document.getElementById('subcategoriesInAnalysis');
-                const selectedSubcategories = Array.from(subcategoriesInBox.querySelectorAll('button')).map(btn => btn.textContent);
-                
-                if (selectedSubcategories.length === 0) {
-                    hideLoading();
-                    showError('Debes tener al menos una subcategoría en "En análisis".');
-                    return;
-                }                
-                const additionalFilters = [];
-                if (selectedSubcategories.length > 0) {
-                    additionalFilters.push({ 
-                        category: selectedCategory, 
-                        values: selectedSubcategories 
-                    });
-                }
-                
-                // Check if denominators are loaded
-                    if (denominatorsData) {
-                        // Show Paso 5 for service grouping
-                        initializeServiceGrouping();
-                        document.getElementById('denominatorsStep').style.display = 'block';
-                        document.getElementById('denominatorsStep').scrollIntoView({ behavior: 'smooth' });
-                        hideLoading();
-                    } else {
-                    // No denominators, generate analysis directly
-                    const crossData = performCrossAnalysis({
-                        crossCategory,
-                        periodType,
-                        dateType,
-                        selectedPeriods,
-                        selectedServices,
-                        selectedUnits: [],
-                        additionalFilters
-                    });
-                    
-                    displayCrossAnalysisResults(crossData);
-                    hideLoading();
-                }
-                
-            } catch (error) {
-                hideLoading();
-                showError(`Error al generar análisis: ${error.message}`);
-            }
-        }
-
+        
        function buildDenominatorMappings(selectedCategory) {
             const container = document.getElementById('denominatorMappings');
             container.innerHTML = '';
@@ -2179,57 +2143,9 @@ function resetAnalysis() {
 let serviceGroups = [];
 let groupIdCounter = 0;
 
-function initializeServiceGrouping() {
-    serviceGroups = [];
-    groupIdCounter = 0;
-    
-    const inBox = document.getElementById('servicesInAnalysis');
-    const selectedServices = Array.from(inBox.querySelectorAll('button')).map(btn => btn.textContent);
-    
-    // Clear containers
-    document.getElementById('serviceGroupsContainer').innerHTML = '';
-    renderUngroupedServices(selectedServices);
-}
 
-function renderUngroupedServices(services) {
-    const container = document.getElementById('ungroupedServices');
-    container.innerHTML = '';
-    
-    if (services.length === 0) {
-        container.innerHTML = '<span style="color:#666; font-style:italic;">Todos los servicios han sido agrupados</span>';
-        return;
-    }
-    
-    services.forEach(service => {
-        const btn = document.createElement('button');
-        btn.textContent = service;
-        btn.className = 'ungrouped-service-btn';
-        btn.dataset.service = service;
-        btn.style.cssText = 'padding:8px 12px; background:#fff; border:1px solid #ddd; border-radius:5px; cursor:grab; font-size:13px; transition:all 0.2s; color:#333;';
-        btn.draggable = true;
-        btn.ondragstart = (e) => {
-            e.dataTransfer.setData('text/plain', service);
-            btn.style.opacity = '0.5';
-        };
-        btn.ondragend = () => {
-            btn.style.opacity = '1';
-        };
-        btn.onclick = () => addServiceToLastGroup(service);
-        container.appendChild(btn);
-    });
-}
 
-function getUngroupedServices() {
-    const inBox = document.getElementById('servicesInAnalysis');
-    const allServices = Array.from(inBox.querySelectorAll('button')).map(btn => btn.textContent);
-    
-    const groupedServices = new Set();
-    serviceGroups.forEach(group => {
-        group.services.forEach(s => groupedServices.add(s));
-    });
-    
-    return allServices.filter(s => !groupedServices.has(s));
-}
+
 
 function createNewGroup(groupName = null) {
     const groupId = groupIdCounter++;
@@ -2248,7 +2164,7 @@ function createNewGroup(groupName = null) {
     
     serviceGroups.push(group);
     renderGroup(group);
-    updateUngroupedServices();
+    renderAvailableServices();
     
     return groupId;
 }
@@ -2334,6 +2250,13 @@ function addServiceToGroup(groupId, serviceName) {
     const group = serviceGroups.find(g => g.id === groupId);
     if (!group || group.services.includes(serviceName)) return;
     
+    // Remove from solo if present
+    const soloIdx = soloServices.indexOf(serviceName);
+    if (soloIdx > -1) {
+        soloServices.splice(soloIdx, 1);
+        renderSoloServices();
+    }
+    
     // Check if service is in another group
     serviceGroups.forEach(g => {
         const idx = g.services.indexOf(serviceName);
@@ -2345,18 +2268,9 @@ function addServiceToGroup(groupId, serviceName) {
     
     group.services.push(serviceName);
     addServiceBtnToGroup(groupId, serviceName);
-    updateUngroupedServices();
+    renderAvailableServices();
 }
 
-function addServiceToLastGroup(serviceName) {
-    if (serviceGroups.length === 0) {
-        const newGroupId = createNewGroup();
-        addServiceToGroup(newGroupId, serviceName);
-    } else {
-        const lastGroup = serviceGroups[serviceGroups.length - 1];
-        addServiceToGroup(lastGroup.id, serviceName);
-    }
-}
 
 function removeServiceFromGroup(groupId, serviceName) {
     const group = serviceGroups.find(g => g.id === groupId);
@@ -2366,7 +2280,7 @@ function removeServiceFromGroup(groupId, serviceName) {
     if (idx > -1) {
         group.services.splice(idx, 1);
         rerenderGroupServices(groupId);
-        updateUngroupedServices();
+        renderAvailableServices();
     }
 }
 
@@ -2386,10 +2300,7 @@ function rerenderGroupServices(groupId) {
     }
 }
 
-function updateUngroupedServices() {
-    const ungrouped = getUngroupedServices();
-    renderUngroupedServices(ungrouped);
-}
+
 
 function updateGroupName(groupId, newName) {
     const group = serviceGroups.find(g => g.id === groupId);
@@ -2412,26 +2323,10 @@ function deleteGroup(groupId) {
         serviceGroups.splice(idx, 1);
         const groupDiv = document.getElementById(`group-${groupId}`);
         if (groupDiv) groupDiv.remove();
-        updateUngroupedServices();
+        renderAvailableServices();
     }
 }
 
-function autoCreateGroups() {
-    // Clear existing groups
-    serviceGroups = [];
-    groupIdCounter = 0;
-    document.getElementById('serviceGroupsContainer').innerHTML = '';
-    
-    const inBox = document.getElementById('servicesInAnalysis');
-    const selectedServices = Array.from(inBox.querySelectorAll('button')).map(btn => btn.textContent);
-    
-    selectedServices.forEach(service => {
-        const groupId = createNewGroup(service);
-        addServiceToGroup(groupId, service);
-    });
-    
-    updateUngroupedServices();
-}
 
 function getDenominatorValueForPeriod(period, denominatorColumnIndex) {
     if (!denominatorsData || denominatorColumnIndex === '' || denominatorColumnIndex === null) return 0;
@@ -2461,9 +2356,9 @@ function getDenominatorValueForPeriod(period, denominatorColumnIndex) {
     return totalDenominator;
 }
 
-function generateAnalysisWithRates() {
+function generateAnalysis() {
     try {
-        showLoading('Generando análisis con tasas...');
+        showLoading('Generando análisis...');
         
         const periodType = document.getElementById('periodType').value;
         const dateType = document.querySelector('input[name="dateType"]:checked').value;
@@ -2486,6 +2381,12 @@ function generateAnalysisWithRates() {
         
         // Get selected category and subcategories
         const selectedCategory = document.getElementById('crossCategory').value;
+        if (!selectedCategory) {
+            hideLoading();
+            showError('Debes seleccionar una categoría a analizar.');
+            return;
+        }
+        
         const subcategoriesInBox = document.getElementById('subcategoriesInAnalysis');
         const selectedSubcategories = Array.from(subcategoriesInBox.querySelectorAll('button')).map(btn => btn.textContent);
         
@@ -2495,11 +2396,7 @@ function generateAnalysisWithRates() {
             return;
         }
         
-        const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
-        const serviceCol = columnIndices.serviceVerified;
-        const categoryColIndex = getCategoryColumnIndex(selectedCategory);
-        
-        // Build complete list of groups (explicit groups + ungrouped services as individual groups)
+        // Build complete list of groups (explicit groups + solo services)
         const allGroups = [];
         
         // Add explicit groups
@@ -2510,28 +2407,33 @@ function generateAnalysisWithRates() {
                     name: group.name,
                     services: group.services,
                     denominatorColumn: group.denominatorColumn,
-                    amplificationFactor: group.amplificationFactor
+                    amplificationFactor: group.amplificationFactor,
+                    isGroup: true
                 });
             }
         });
         
-        // Add ungrouped services as individual groups
-        const ungrouped = getUngroupedServices();
-        ungrouped.forEach(service => {
+        // Add solo services as individual entries
+        soloServices.forEach(service => {
             allGroups.push({
-                id: `ungrouped-${service}`,
+                id: `solo-${service}`,
                 name: service,
                 services: [service],
-                denominatorColumn: '', // No denominator by default
-                amplificationFactor: 1000
+                denominatorColumn: '',
+                amplificationFactor: 1000,
+                isGroup: false
             });
         });
         
         if (allGroups.length === 0) {
             hideLoading();
-            showError('No hay grupos ni servicios para analizar.');
+            showError('Debes seleccionar al menos un servicio o grupo para analizar.');
             return;
         }
+        
+        const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
+        const serviceCol = columnIndices.serviceVerified;
+        const categoryColIndex = getCategoryColumnIndex(selectedCategory);
         
         // Build results data structure
         const ratesData = {
@@ -2547,7 +2449,6 @@ function generateAnalysisWithRates() {
         // Calculate rates for each group and period
         selectedPeriods.forEach(period => {
             ratesData.groups.forEach(group => {
-                // Count events matching selected subcategories for all services in this group
                 let eventCount = 0;
                 
                 cleanedData.uniqueRows.forEach(row => {
@@ -2560,17 +2461,14 @@ function generateAnalysisWithRates() {
                     const service = String(row[serviceCol] || '').trim();
                     if (!group.services.includes(service)) return;
                     
-                    // Check if matches selected subcategory
                     const categoryValue = String(row[categoryColIndex] || 'Sin información').trim() || 'Sin información';
                     if (selectedSubcategories.includes(categoryValue)) {
                         eventCount++;
                     }
                 });
                 
-                // Get denominator value
                 const denomValue = getDenominatorValueForPeriod(period, group.denominatorColumn);
                 
-                // Calculate rate
                 let rate = null;
                 if (denomValue > 0 && group.denominatorColumn !== '') {
                     rate = (eventCount / denomValue) * group.amplificationFactor;
@@ -2592,7 +2490,6 @@ function generateAnalysisWithRates() {
         showError(`Error al generar análisis: ${error.message}`);
     }
 }
-
         function displayRatesResults(ratesData) {
     const { periods, groups, selectedCategory, selectedSubcategories } = ratesData;
     
