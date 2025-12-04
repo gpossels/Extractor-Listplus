@@ -1954,7 +1954,7 @@ function addServiceToGroup(groupId, serviceName) {
         soloServices.splice(soloIdx, 1);
         renderSoloServices();
     }
-
+}
 function removeServiceFromGroup(groupId, serviceName) {
     const group = serviceGroups.find(g => g.id === groupId);
     if (!group) return;
