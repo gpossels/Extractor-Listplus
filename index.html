@@ -1245,28 +1245,9 @@ function moveSubcategory(subcatName, direction) {
         
         
     function getDenominatorForPeriod(period, denominatorColumnIndex) {
-            if (!denominatorsData) return 0;
-            
-            // Find matching row in denominators data
-            for (let row of denominatorsData.rows) {
-                const fechaValue = row[denominatorsData.fechaIdx];
-                if (!fechaValue) continue;
-                
-                // Parse the fecha and convert to same format as period
-                const date = parseDate(fechaValue);
-                if (!date) continue;
-                
-                const periodType = getPeriodType();
-                const rowPeriod = getPeriodKey(date, periodType);
-                
-                if (rowPeriod === period) {
-                    const denomValue = parseFloat(row[denominatorColumnIndex]);
-                    return isNaN(denomValue) ? 0 : denomValue;
-                }
-            }
-            
-            return 0;
-        }
+    const result = getDenominatorValueForPeriod(period, denominatorColumnIndex);
+    return result.value;
+}
         
         function copyCrossColumn(event, columnName) {
             event.stopPropagation();
