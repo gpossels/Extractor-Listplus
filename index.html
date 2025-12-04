@@ -2289,21 +2289,22 @@ soloServices.forEach(solo => {
         const escapedPeriod = String(period).replace(/'/g, "\\'");
         tableHtml += `<tr data-rates-row="${escapedPeriod}"><td><strong>${period}</strong><button class="row-copy-btn" onclick="copyRatesRow(event, '${escapedPeriod}')">copiar</button></td>`;
         
-        groups.forEach(group => {
+       groups.forEach(group => {
     const data = group.periodData[period];
     let rateDisplay;
     
     if (group.denominatorColumn === '') {
-        // No denominator - show count instead
-        rateDisplay = `<span style="color:#999;" title="Sin denominador">${data.count}</span>`;
+        // No denominator configured - show count
+        rateDisplay = `<span style="color:#999;" title="Sin denominador configurado">${data.count}</span>`;
     } else if (data.rate !== null) {
+        // Normal rate display
         rateDisplay = `<span style="font-weight:bold; color:#667eea;">${data.rate.toFixed(2)}</span>`;
     } else if (data.denominator > 0) {
-        // Hay denominador pero no se calculó tasa (esto no debería pasar, pero por si acaso)
+        // Has denominator but rate is null (shouldn't happen, but just in case)
         rateDisplay = `<span style="font-weight:bold; color:#667eea;">0.00</span>`;
     } else {
-        // No hay denominador para este período
-        rateDisplay = `<span style="color:#999;" title="Sin denominador para este período">-</span>`;
+        // No denominator available for this period - show count in parentheses
+        rateDisplay = `<span style="color:#e67e22;" title="Sin denominador para este período - mostrando conteo">(${data.count})</span>`;
     }
             
             tableHtml += `<td style="text-align:center;" data-rates-col="${group.id}">${rateDisplay}</td>`;
