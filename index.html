@@ -1946,7 +1946,7 @@ function addServiceToGroup(groupId, serviceName) {
     const group = serviceGroups.find(g => g.id === groupId);
     if (!group || group.services.includes(serviceName)) return;
     
-    // Remove from solo if present (handle object-based solo services)
+    // Quitar de solo, si está
     const soloIdx = soloServices.findIndex(s => 
         (typeof s === 'object' ? s.name : s) === serviceName
     );
@@ -1954,7 +1954,17 @@ function addServiceToGroup(groupId, serviceName) {
         soloServices.splice(soloIdx, 1);
         renderSoloServices();
     }
+
+    // ✅ Agregar al grupo
+    group.services.push(serviceName);
+
+    // ✅ Pintar el botón dentro del contenedor del grupo
+    addServiceBtnToGroup(groupId, serviceName);
+
+    // ✅ Actualizar lista de servicios disponibles
+    renderAvailableServices();
 }
+
 function removeServiceFromGroup(groupId, serviceName) {
     const group = serviceGroups.find(g => g.id === groupId);
     if (!group) return;
