@@ -1500,19 +1500,24 @@ function parseDate(dateStr) {
             }
         }
 
-        // 3) Texto DD-MM-AAAA ó DD/MM/AAAA
-        const dateString = String(dateStr).trim();
-        const match = dateString.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
-        if (match) {
-            const day = parseInt(match[1], 10);
-            const month = parseInt(match[2], 10) - 1;
-            const year = parseInt(match[3], 10);
+        // 3) Texto DD-MM-AAAA ó DD/MM/AAAA ó DD-MM-AA ó DD/MM/AA
+const dateString = String(dateStr).trim();
+const match = dateString.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
+if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    let year = parseInt(match[3], 10);
+    
+    // Si el año tiene 2 dígitos, convertir a 4 dígitos
+    if (year < 100) {
+        year += (year < 50) ? 2000 : 1900;  // 00-49 -> 2000-2049, 50-99 -> 1950-1999
+    }
 
-            const d = new Date(year, month, day);
-            if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
-                return d;
-            }
-        }
+    const d = new Date(year, month, day);
+    if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+        return d;
+    }
+}
 
         // 4) Último intento con new Date
         const dGeneric = new Date(dateString);
