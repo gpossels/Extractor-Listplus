@@ -2076,12 +2076,11 @@ function deleteGroup(groupId) {
 
 
 function getDenominatorValueForPeriod(period, denominatorColumnIndex) {
-    if (!denominatorsData || denominatorColumnIndex === '' || denominatorColumnIndex === null) return 0;
+    if (!denominatorsData || denominatorColumnIndex === '' || denominatorColumnIndex === null) {
+        return { value: 0, found: false };
+    }
     
     const periodType = getPeriodType();
-    
-    // Sum all denominators that fall within this period
-    let totalDenominator = 0;
     
     for (let row of denominatorsData.rows) {
         const fechaValue = row[denominatorsData.fechaIdx];
@@ -2094,13 +2093,14 @@ function getDenominatorValueForPeriod(period, denominatorColumnIndex) {
         
         if (rowPeriod === period) {
             const denomValue = parseFloat(row[denominatorColumnIndex]);
-            if (!isNaN(denomValue)) {
-                totalDenominator += denomValue;
-            }
+            return { 
+                value: isNaN(denomValue) ? 0 : denomValue, 
+                found: true 
+            };
         }
     }
     
-    return totalDenominator;
+    return { value: 0, found: false };
 }
 
 function generateAnalysis() {
@@ -2218,18 +2218,19 @@ soloServices.forEach(solo => {
                     }
                 });
                 
-                const denomValue = getDenominatorValueForPeriod(period, group.denominatorColumn);
-                
-                let rate = null;
-                if (denomValue > 0 && group.denominatorColumn !== '') {
-                    rate = (eventCount / denomValue) * group.amplificationFactor;
-                }
-                
-                group.periodData[period] = {
-                    count: eventCount,
-                    denominator: denomValue,
-                    rate: rate
-                };
+                const denomResult = getDenominatorValueForPeriod(period, group.denominatorColumn);
+
+let rate = null;
+if (denomResult.value > 0 && group.denominatorColumn !== '') {
+    rate = (eventCount / denomResult.value) * group.amplificationFactor;
+}
+
+group.periodData[period] = {
+    count: eventCount,
+    denominator: denomResult.value,
+    denominatorFound: denomResult.found,
+    rate: rate
+};
             });
         });
         
@@ -2294,17 +2295,17 @@ soloServices.forEach(solo => {
     let rateDisplay;
     
     if (group.denominatorColumn === '') {
-        // No denominator configured - show count
+        // No denominator configured - show count in gray
         rateDisplay = `<span style="color:#999;" title="Sin denominador configurado">${data.count}</span>`;
     } else if (data.rate !== null) {
         // Normal rate display
         rateDisplay = `<span style="font-weight:bold; color:#667eea;">${data.rate.toFixed(2)}</span>`;
-    } else if (data.denominator > 0) {
-        // Has denominator but rate is null (shouldn't happen, but just in case)
-        rateDisplay = `<span style="font-weight:bold; color:#667eea;">0.00</span>`;
+    } else if (data.denominatorFound && data.denominator === 0) {
+        // Denominator row exists but value is 0 - show count in orange parentheses
+        rateDisplay = `<span style="color:#e67e22;" title="Denominador = 0 para este período">(${data.count})</span>`;
     } else {
-        // No denominator available for this period - show count in parentheses
-        rateDisplay = `<span style="color:#e67e22;" title="Sin denominador para este período - mostrando conteo">(${data.count})</span>`;
+        // No denominator row found for this period - show count in red brackets
+        rateDisplay = `<span style="color:#dc3545;" title="Sin datos de denominador para este período">[${data.count}]</span>`;
     }
             
             tableHtml += `<td style="text-align:center;" data-rates-col="${group.id}">${rateDisplay}</td>`;
