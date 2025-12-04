@@ -1083,8 +1083,15 @@ function addAllAsSolo() {
     const available = uniqueServices.filter(s => !selectedServices.includes(s));
     
     available.forEach(service => {
-        if (!soloServices.includes(service)) {
-            soloServices.push(service);
+        const existingIdx = soloServices.findIndex(s => 
+            (typeof s === 'object' ? s.name : s) === service
+        );
+        if (existingIdx === -1) {
+            soloServices.push({
+                name: service,
+                denominatorColumn: '',
+                amplificationFactor: 1000
+            });
         }
     });
     
