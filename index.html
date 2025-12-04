@@ -1426,7 +1426,12 @@ function handleDenominatorsFile(e) {
 function processDenominatorsFile() {
     try {
         const firstSheet = denominatorsWorkbook.Sheets[denominatorsWorkbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
+    header: 1,
+    cellDates: true,
+    raw: false
+});
+
         
         if (jsonData.length < 2) {
             hideLoading();
