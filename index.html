@@ -391,16 +391,35 @@
             <h2>Paso 2: Determinar Periodos</h2>
             <div style="display:grid; grid-template-columns: 200px 250px 1fr; gap:20px; align-items:start;">
                 <div class="control-group">
-                    <label>Periodo de análisis:</label>
-                    <select id="periodType" onchange="updatePeriodSlider()">
-                        <option value="year">Año</option>
-                        <option value="semester">Semestre</option>
-                        <option value="quarter4">Cuatrimestre</option>
-                        <option value="quarter">Trimestre</option>
-                        <option value="month" selected>Mes</option>
-                        <option value="week">Semana</option>
-                    </select>
-                </div>
+    <label>Periodo de análisis:</label>
+    <div id="periodTypeGroup" class="period-type-group">
+        <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+            <input type="radio" name="periodType" value="year" onclick="updatePeriodSlider()">
+            Año
+        </label>
+        <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+            <input type="radio" name="periodType" value="semester" onclick="updatePeriodSlider()">
+            Semestre
+        </label>
+        <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+            <input type="radio" name="periodType" value="quarter4" onclick="updatePeriodSlider()">
+            Cuatrimestre
+        </label>
+        <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+            <input type="radio" name="periodType" value="quarter" onclick="updatePeriodSlider()">
+            Trimestre
+        </label>
+        <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+            <input type="radio" name="periodType" value="month" checked onclick="updatePeriodSlider()">
+            Mes
+        </label>
+        <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+            <input type="radio" name="periodType" value="week" onclick="updatePeriodSlider()">
+            Semana
+        </label>
+    </div>
+</div>
+
                 <div class="control-group">
                     <label>Fecha a utilizar:</label>
                     <div style="display:flex; flex-direction:column; gap:8px; margin-top:5px;">
@@ -606,7 +625,12 @@
             const uploadArea = document.getElementById('uploadArea');
             uploadArea.classList.remove('error');
         }
-        
+        function getPeriodType() {
+    const selected = document.querySelector('input[name="periodType"]:checked');
+    // Por defecto, mes si por alguna razón no hay ninguno marcado
+    return selected ? selected.value : 'month';
+}
+
         function handleFile(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -807,7 +831,8 @@ info.innerHTML = `
         
         
         function buildAllPeriods() {
-                const periodType = document.getElementById('periodType').value;
+                const periodType = getPeriodType();
+
                 const dateType = document.querySelector('input[name="dateType"]:checked').value;
                 const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
                 
@@ -879,7 +904,7 @@ info.innerHTML = `
         }
         
         function updateCrossYearPeriodOptions() {
-            const periodType = document.getElementById('periodType').value;
+            const periodType = getPeriodType();
             const select = document.getElementById('crossYearPeriod');
             select.innerHTML = '';
             
@@ -1224,7 +1249,7 @@ function moveSubcategory(subcatName, direction) {
                 const date = parseDate(fechaValue);
                 if (!date) continue;
                 
-                const periodType = document.getElementById('periodType').value;
+                const periodType = getPeriodType();
                 const rowPeriod = getPeriodKey(date, periodType);
                 
                 if (rowPeriod === period) {
@@ -2024,7 +2049,7 @@ function deleteGroup(groupId) {
 function getDenominatorValueForPeriod(period, denominatorColumnIndex) {
     if (!denominatorsData || denominatorColumnIndex === '' || denominatorColumnIndex === null) return 0;
     
-    const periodType = document.getElementById('periodType').value;
+    const periodType = getPeriodType();
     
     // Sum all denominators that fall within this period
     let totalDenominator = 0;
@@ -2053,7 +2078,7 @@ function generateAnalysis() {
     try {
         showLoading('Generando análisis...');
         
-        const periodType = document.getElementById('periodType').value;
+        const periodType = getPeriodType();
         const dateType = document.querySelector('input[name="dateType"]:checked').value;
         const crossYearEnabled = document.getElementById('crossYearComparison').checked;
         
