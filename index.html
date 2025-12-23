@@ -1032,11 +1032,12 @@ function addServiceAsSolo(serviceName) {
     });
     
     // Add as object with denominator and factor
-    soloServices.push({
-        name: serviceName,
-        denominatorColumn: '',
-        amplificationFactor: 1000
-    });
+soloServices.push({
+    name: serviceName,
+    denominatorColumn: '',
+    amplificationFactor: 1000,
+    manualDenominator: null
+});
     renderAvailableServices();
     renderSoloServices();
 }
@@ -1055,6 +1056,14 @@ function updateSoloAmpFactor(serviceName, factor) {
     }
 }
 
+function updateSoloManualDenominator(serviceName, value) {
+    const solo = soloServices.find(s => (typeof s === 'object' ? s.name : s) === serviceName);
+    if (solo && typeof solo === 'object') {
+        const numValue = parseFloat(value);
+        solo.manualDenominator = (value === '' || isNaN(numValue)) ? null : numValue;
+    }
+}
+        
         function removeServiceFromSolo(serviceName) {
     const idx = soloServices.findIndex(s => 
         (typeof s === 'object' ? s.name : s) === serviceName
@@ -1093,17 +1102,23 @@ function renderSoloServices() {
         const soloDiv = document.createElement('div');
         soloDiv.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:10px; background:white; border:1px solid #4caf50; border-radius:8px; margin-bottom:8px;';
         
-        soloDiv.innerHTML = `
-            <button onclick="removeServiceFromSolo('${serviceName.replace(/'/g, "\\'")}')" style="padding:4px 8px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer; font-size:11px;">✕</button>
-            <strong style="color:#4caf50; min-width:150px;">${serviceName}</strong>
-            <select onchange="updateSoloDenominator('${serviceName.replace(/'/g, "\\'")}', this.value)" style="padding:5px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
-                ${denominatorOptions.replace(`value="${currentDenom}"`, `value="${currentDenom}" selected`)}
-            </select>
-            <div style="display:flex; align-items:center; gap:5px;">
-                <label style="font-size:12px; margin:0;">Factor:</label>
-                <input type="number" value="${currentFactor}" min="1" onchange="updateSoloAmpFactor('${serviceName.replace(/'/g, "\\'")}', this.value)" style="width:70px; padding:5px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
-            </div>
-        `;
+        const currentManualDenom = typeof solo === 'object' ? solo.manualDenominator : null;
+
+soloDiv.innerHTML = `
+    <button onclick="removeServiceFromSolo('${serviceName.replace(/'/g, "\\'")}')" style="padding:4px 8px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer; font-size:11px;">✕</button>
+    <strong style="color:#4caf50; min-width:150px;">${serviceName}</strong>
+    <select onchange="updateSoloDenominator('${serviceName.replace(/'/g, "\\'")}', this.value)" style="padding:5px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+        ${denominatorOptions.replace(`value="${currentDenom}"`, `value="${currentDenom}" selected`)}
+    </select>
+    <div style="display:flex; align-items:center; gap:5px;">
+        <label style="font-size:12px; margin:0;">Denom. manual:</label>
+        <input type="number" value="${currentManualDenom !== null ? currentManualDenom : ''}" placeholder="Ej: 1000" min="0" step="0.01" onchange="updateSoloManualDenominator('${serviceName.replace(/'/g, "\\'")}', this.value)" style="width:90px; padding:5px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+    </div>
+    <div style="display:flex; align-items:center; gap:5px;">
+        <label style="font-size:12px; margin:0;">Factor:</label>
+        <input type="number" value="${currentFactor}" min="1" onchange="updateSoloAmpFactor('${serviceName.replace(/'/g, "\\'")}', this.value)" style="width:70px; padding:5px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
+    </div>
+`;
         
         container.appendChild(soloDiv);
     });
@@ -1886,12 +1901,13 @@ function createNewGroup(groupName = null) {
     }
     
     const group = {
-        id: groupId,
-        name: groupName,
-        services: [],
-        denominatorColumn: '',
-        amplificationFactor: 1000
-    };
+    id: groupId,
+    name: groupName,
+    services: [],
+    denominatorColumn: '',
+    amplificationFactor: 1000,
+    manualDenominator: null
+};
     
     serviceGroups.push(group);
     renderGroup(group);
@@ -1918,19 +1934,25 @@ function renderGroup(group) {
     }
     
     groupDiv.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <input type="text" value="${group.name}" onchange="updateGroupName(${group.id}, this.value)" 
-                   style="font-size:16px; font-weight:600; color:#667eea; border:none; background:transparent; border-bottom:2px solid #667eea; padding:5px;">
-            <button onclick="deleteGroup(${group.id})" style="background:#dc3545; padding:5px 10px; font-size:12px;">🗑️ Eliminar</button>
-        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; gap:10px;">
+    <input type="text" value="${group.name}" onchange="updateGroupName(${group.id}, this.value)" 
+           style="font-size:16px; font-weight:600; color:#667eea; border:none; background:transparent; border-bottom:2px solid #667eea; padding:5px; flex:1;">
+    <button onclick="addAllServicesToGroup(${group.id})" style="background:#17a2b8; padding:5px 10px; font-size:12px; white-space:nowrap;">➕ Agregar Todos</button>
+    <button onclick="deleteGroup(${group.id})" style="background:#dc3545; padding:5px 10px; font-size:12px;">🗑️ Eliminar</button>
+</div>
         
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
             <div class="control-group">
-                <label>Columna de Denominador:</label>
-                <select id="denominator-${group.id}" onchange="updateGroupDenominator(${group.id}, this.value)">
-                    ${denominatorOptions}
-                </select>
-            </div>
+    <label>Columna de Denominador:</label>
+    <select id="denominator-${group.id}" onchange="updateGroupDenominator(${group.id}, this.value)">
+        ${denominatorOptions}
+    </select>
+    <label style="margin-top:8px;">O denominador manual por período:</label>
+    <input type="number" id="manual-denom-${group.id}" placeholder="Ej: 1000" min="0" step="0.01"
+           onchange="updateGroupManualDenominator(${group.id}, this.value)"
+           style="padding:8px; border:1px solid #ddd; border-radius:5px; width:100%; font-size:13px;">
+    <small style="color:#666; font-size:11px;">Si se usa denominador manual, se ignorará la columna</small>
+</div>
             <div class="control-group">
                 <label>Factor de Amplificación:</label>
                 <input type="number" id="ampfactor-${group.id}" value="${group.amplificationFactor}" min="1" 
@@ -1999,7 +2021,14 @@ function addServiceToGroup(groupId, serviceName) {
     // ✅ Actualizar lista de servicios disponibles
     renderAvailableServices();
 }
-
+function addAllServicesToGroup(groupId) {
+    const selectedServices = getSelectedServices();
+    const available = uniqueServices.filter(s => !selectedServices.includes(s));
+    
+    available.forEach(service => {
+        addServiceToGroup(groupId, service);
+    });
+}
 function removeServiceFromGroup(groupId, serviceName) {
     const group = serviceGroups.find(g => g.id === groupId);
     if (!group) return;
@@ -2045,6 +2074,14 @@ function updateGroupAmpFactor(groupId, factor) {
     if (group) group.amplificationFactor = parseInt(factor) || 1000;
 }
 
+function updateGroupManualDenominator(groupId, value) {
+    const group = serviceGroups.find(g => g.id === groupId);
+    if (group) {
+        const numValue = parseFloat(value);
+        group.manualDenominator = (value === '' || isNaN(numValue)) ? null : numValue;
+    }
+}
+        
 function deleteGroup(groupId) {
     const idx = serviceGroups.findIndex(g => g.id === groupId);
     if (idx > -1) {
@@ -2128,24 +2165,26 @@ function generateAnalysis() {
         const allGroups = [];
         
         // Add explicit groups
-        serviceGroups.forEach(group => {
-            if (group.services.length > 0) {
-                allGroups.push({
-                    id: group.id,
-                    name: group.name,
-                    services: group.services,
-                    denominatorColumn: group.denominatorColumn,
-                    amplificationFactor: group.amplificationFactor,
-                    isGroup: true
-                });
-            }
+serviceGroups.forEach(group => {
+    if (group.services.length > 0) {
+        allGroups.push({
+            id: group.id,
+            name: group.name,
+            services: group.services,
+            denominatorColumn: group.denominatorColumn,
+            amplificationFactor: group.amplificationFactor,
+            manualDenominator: group.manualDenominator,
+            isGroup: true
         });
-        
-       // Add solo services as individual entries
+    }
+});
+
+// Add solo services as individual entries
 soloServices.forEach(solo => {
     const serviceName = typeof solo === 'object' ? solo.name : solo;
     const denomColumn = typeof solo === 'object' ? solo.denominatorColumn : '';
     const ampFactor = typeof solo === 'object' ? solo.amplificationFactor : 1000;
+    const manualDenom = typeof solo === 'object' ? solo.manualDenominator : null;
     
     allGroups.push({
         id: `solo-${serviceName}`,
@@ -2153,6 +2192,7 @@ soloServices.forEach(solo => {
         services: [serviceName],
         denominatorColumn: denomColumn,
         amplificationFactor: ampFactor,
+        manualDenominator: manualDenom,
         isGroup: false
     });
 });
@@ -2199,18 +2239,27 @@ soloServices.forEach(solo => {
                     }
                 });
                 
-                const denomResult = getDenominatorValueForPeriod(period, group.denominatorColumn);
-
+               let denomResult;
 let rate = null;
-if (denomResult.value > 0 && group.denominatorColumn !== '') {
-    rate = (eventCount / denomResult.value) * group.amplificationFactor;
+
+if (group.manualDenominator !== null && group.manualDenominator > 0) {
+    // Use manual denominator
+    denomResult = { value: group.manualDenominator, found: true };
+    rate = (eventCount / group.manualDenominator) * group.amplificationFactor;
+} else {
+    // Use denominator from file
+    denomResult = getDenominatorValueForPeriod(period, group.denominatorColumn);
+    if (denomResult.value > 0 && group.denominatorColumn !== '') {
+        rate = (eventCount / denomResult.value) * group.amplificationFactor;
+    }
 }
 
 group.periodData[period] = {
     count: eventCount,
     denominator: denomResult.value,
     denominatorFound: denomResult.found,
-    rate: rate
+    rate: rate,
+    isManualDenominator: group.manualDenominator !== null
 };
             });
         });
@@ -2257,12 +2306,20 @@ group.periodData[period] = {
     `;
     
     // Add column headers for each group (only rate)
-    groups.forEach(group => {
-        const sanitizedName = group.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const hasdenominator = group.denominatorColumn !== '';
-        const factorLabel = hasdenominator ? `×${group.amplificationFactor}` : 'sin denom.';
-        tableHtml += `<th style="text-align:center;">${sanitizedName}<br><small>(${factorLabel})</small><button class="copy-btn" onclick="copyRatesColumn(event, '${group.id}')">copiar</button></th>`;
-    });
+groups.forEach(group => {
+    const sanitizedName = group.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    let factorLabel;
+    
+    if (group.manualDenominator !== null) {
+        factorLabel = `Manual: ${group.manualDenominator} ×${group.amplificationFactor}`;
+    } else if (group.denominatorColumn !== '') {
+        factorLabel = `×${group.amplificationFactor}`;
+    } else {
+        factorLabel = 'sin denom.';
+    }
+    
+    tableHtml += `<th style="text-align:center;">${sanitizedName}<br><small>(${factorLabel})</small><button class="copy-btn" onclick="copyRatesColumn(event, '${group.id}')">copiar</button></th>`;
+});
     
     tableHtml += `</tr></thead><tbody>`;
     
@@ -2333,21 +2390,27 @@ group.periodData[period] = {
     `;
     
     groups.forEach(group => {
-        const denomName = group.denominatorColumn !== '' && denominatorsData 
-            ? denominatorsData.headers[group.denominatorColumn] 
-            : 'Sin denominador';
-        
-        const isSolo = String(group.id).startsWith('solo-');
-        const borderColor = isSolo ? '#4caf50' : '#667eea';
-        
-        tableHtml += `
-            <div style="background:#f8f9fa; padding:15px; margin-bottom:10px; border-radius:8px; border-left:4px solid ${borderColor};">
-                <strong>${group.name}</strong>${isSolo ? ' <small>(solo)</small>' : ''}<br>
-                <small>Denominador: ${denomName} | Factor: ×${group.amplificationFactor}</small><br>
-                <small>Servicios: ${group.services.join(', ')}</small>
-            </div>
-        `;
-    });
+    let denomInfo;
+    
+    if (group.manualDenominator !== null) {
+        denomInfo = `Manual: ${group.manualDenominator}`;
+    } else if (group.denominatorColumn !== '' && denominatorsData) {
+        denomInfo = denominatorsData.headers[group.denominatorColumn];
+    } else {
+        denomInfo = 'Sin denominador';
+    }
+    
+    const isSolo = String(group.id).startsWith('solo-');
+    const borderColor = isSolo ? '#4caf50' : '#667eea';
+    
+    tableHtml += `
+        <div style="background:#f8f9fa; padding:15px; margin-bottom:10px; border-radius:8px; border-left:4px solid ${borderColor};">
+            <strong>${group.name}</strong>${isSolo ? ' <small>(solo)</small>' : ''}<br>
+            <small>Denominador: ${denomInfo} | Factor: ×${group.amplificationFactor}</small><br>
+            <small>Servicios: ${group.services.join(', ')}</small>
+        </div>
+    `;
+});
     
     tableHtml += `</div></div>`;
     
