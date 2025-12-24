@@ -1095,8 +1095,7 @@ function renderSoloServices() {
         const soloDiv = document.createElement('div');
         soloDiv.style.cssText = 'display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:10px; background:white; border:1px solid #4caf50; border-radius:8px; margin-bottom:8px;';
         
-        const currentManualDenom = typeof solo === 'object' ? solo.manualDenominator : null;
-
+       
 soloDiv.innerHTML = `
     <button onclick="removeServiceFromSolo('${serviceName.replace(/'/g, "\\'")}')" style="padding:4px 8px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer; font-size:11px;">✕</button>
     <strong style="color:#4caf50; min-width:150px;">${serviceName}</strong>
@@ -2148,7 +2147,6 @@ serviceGroups.forEach(group => {
             services: group.services,
             denominatorColumn: group.denominatorColumn,
             amplificationFactor: group.amplificationFactor,
-            manualDenominator: group.manualDenominator,
             isGroup: true
         });
     }
@@ -2159,7 +2157,7 @@ soloServices.forEach(solo => {
     const serviceName = typeof solo === 'object' ? solo.name : solo;
     const denomColumn = typeof solo === 'object' ? solo.denominatorColumn : '';
     const ampFactor = typeof solo === 'object' ? solo.amplificationFactor : 1000;
-    const manualDenom = typeof solo === 'object' ? solo.manualDenominator : null;
+    
     
     allGroups.push({
         id: `solo-${serviceName}`,
@@ -2214,21 +2212,11 @@ soloServices.forEach(solo => {
                     }
                 });
                 
-               let denomResult;
+               const denomResult = getDenominatorValueForPeriod(period, group.denominatorColumn);
 let rate = null;
-
-if (group.manualDenominator !== null && group.manualDenominator > 0) {
-    // Use manual denominator
-    denomResult = { value: group.manualDenominator, found: true };
-    rate = (eventCount / group.manualDenominator) * group.amplificationFactor;
-} else {
-    // Use denominator from file
-    denomResult = getDenominatorValueForPeriod(period, group.denominatorColumn);
-    if (denomResult.value > 0 && group.denominatorColumn !== '') {
-        rate = (eventCount / denomResult.value) * group.amplificationFactor;
-    }
+if (denomResult.value > 0 && group.denominatorColumn !== '') {
+    rate = (eventCount / denomResult.value) * group.amplificationFactor;
 }
-
 group.periodData[period] = {
     count: eventCount,
     denominator: denomResult.value,
