@@ -1035,8 +1035,7 @@ function addServiceAsSolo(serviceName) {
 soloServices.push({
     name: serviceName,
     denominatorColumn: '',
-    amplificationFactor: 1000,
-    manualDenominator: null
+    amplificationFactor: 1000
 });
     renderAvailableServices();
     renderSoloServices();
@@ -1056,13 +1055,7 @@ function updateSoloAmpFactor(serviceName, factor) {
     }
 }
 
-function updateSoloManualDenominator(serviceName, value) {
-    const solo = soloServices.find(s => (typeof s === 'object' ? s.name : s) === serviceName);
-    if (solo && typeof solo === 'object') {
-        const numValue = parseFloat(value);
-        solo.manualDenominator = (value === '' || isNaN(numValue)) ? null : numValue;
-    }
-}
+
         
         function removeServiceFromSolo(serviceName) {
     const idx = soloServices.findIndex(s => 
@@ -1110,10 +1103,6 @@ soloDiv.innerHTML = `
     <select onchange="updateSoloDenominator('${serviceName.replace(/'/g, "\\'")}', this.value)" style="padding:5px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
         ${denominatorOptions.replace(`value="${currentDenom}"`, `value="${currentDenom}" selected`)}
     </select>
-    <div style="display:flex; align-items:center; gap:5px;">
-        <label style="font-size:12px; margin:0;">Denom. manual:</label>
-        <input type="number" value="${currentManualDenom !== null ? currentManualDenom : ''}" placeholder="Ej: 1000" min="0" step="0.01" onchange="updateSoloManualDenominator('${serviceName.replace(/'/g, "\\'")}', this.value)" style="width:90px; padding:5px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
-    </div>
     <div style="display:flex; align-items:center; gap:5px;">
         <label style="font-size:12px; margin:0;">Factor:</label>
         <input type="number" value="${currentFactor}" min="1" onchange="updateSoloAmpFactor('${serviceName.replace(/'/g, "\\'")}', this.value)" style="width:70px; padding:5px; border:1px solid #ddd; border-radius:4px; font-size:12px;">
@@ -1906,8 +1895,7 @@ function createNewGroup(groupName = null) {
     services: [],
     denominatorColumn: '',
     amplificationFactor: 1000,
-    manualDenominator: null
-};
+    };
     
     serviceGroups.push(group);
     renderGroup(group);
@@ -1947,11 +1935,6 @@ function renderGroup(group) {
     <select id="denominator-${group.id}" onchange="updateGroupDenominator(${group.id}, this.value)">
         ${denominatorOptions}
     </select>
-    <label style="margin-top:8px;">O denominador manual por período:</label>
-    <input type="number" id="manual-denom-${group.id}" placeholder="Ej: 1000" min="0" step="0.01"
-           onchange="updateGroupManualDenominator(${group.id}, this.value)"
-           style="padding:8px; border:1px solid #ddd; border-radius:5px; width:100%; font-size:13px;">
-    <small style="color:#666; font-size:11px;">Si se usa denominador manual, se ignorará la columna</small>
 </div>
             <div class="control-group">
                 <label>Factor de Amplificación:</label>
@@ -2074,14 +2057,6 @@ function updateGroupAmpFactor(groupId, factor) {
     if (group) group.amplificationFactor = parseInt(factor) || 1000;
 }
 
-function updateGroupManualDenominator(groupId, value) {
-    const group = serviceGroups.find(g => g.id === groupId);
-    if (group) {
-        const numValue = parseFloat(value);
-        group.manualDenominator = (value === '' || isNaN(numValue)) ? null : numValue;
-    }
-}
-        
 function deleteGroup(groupId) {
     const idx = serviceGroups.findIndex(g => g.id === groupId);
     if (idx > -1) {
@@ -2259,8 +2234,7 @@ group.periodData[period] = {
     denominator: denomResult.value,
     denominatorFound: denomResult.found,
     rate: rate,
-    isManualDenominator: group.manualDenominator !== null
-};
+    };
             });
         });
         
@@ -2310,9 +2284,7 @@ groups.forEach(group => {
     const sanitizedName = group.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
     let factorLabel;
     
-    if (group.manualDenominator !== null) {
-        factorLabel = `Manual: ${group.manualDenominator} ×${group.amplificationFactor}`;
-    } else if (group.denominatorColumn !== '') {
+     if (group.denominatorColumn !== '') {
         factorLabel = `×${group.amplificationFactor}`;
     } else {
         factorLabel = 'sin denom.';
@@ -2392,9 +2364,7 @@ groups.forEach(group => {
     groups.forEach(group => {
     let denomInfo;
     
-    if (group.manualDenominator !== null) {
-        denomInfo = `Manual: ${group.manualDenominator}`;
-    } else if (group.denominatorColumn !== '' && denominatorsData) {
+     if (group.denominatorColumn !== '' && denominatorsData) {
         denomInfo = denominatorsData.headers[group.denominatorColumn];
     } else {
         denomInfo = 'Sin denominador';
