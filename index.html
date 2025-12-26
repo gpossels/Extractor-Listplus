@@ -807,6 +807,22 @@ cleanedData = {
     rows: allRows, // Store ALL rows (no duplicate removal)
     uniqueIds: uniqueIds // Store unique IDs for counting
 };
+
+                // DEBUG: Log some event IDs and dates
+console.log('=== DEBUG: First 10 Event IDs and Notification Dates ===');
+const notifDateIdx = columnIndices.notificationDate;
+for (let i = 0; i < Math.min(10, allRows.length); i++) {
+    const eventId = allRows[i][columnIndices.eventId];
+    const notifDate = allRows[i][notifDateIdx];
+    console.log(`Row ${i}: ID=${eventId}, NotifDate=${notifDate} (type: ${typeof notifDate})`);
+}
+
+// Look for specific IDs
+const id51166 = allRows.find(row => row[columnIndices.eventId] === 51166 || row[columnIndices.eventId] === '51166');
+const id48706 = allRows.find(row => row[columnIndices.eventId] === 48706 || row[columnIndices.eventId] === '48706');
+console.log('ID 51166 found:', id51166 ? `NotifDate=${id51166[notifDateIdx]}` : 'NOT FOUND');
+console.log('ID 48706 found:', id48706 ? `NotifDate=${id48706[notifDateIdx]}` : 'NOT FOUND');
+                
                 const uploadArea = document.getElementById('uploadArea');
                 uploadArea.classList.add('loaded');
                 uploadArea.classList.remove('error');
