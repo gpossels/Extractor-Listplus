@@ -1470,10 +1470,26 @@ function processDenominatorsFile() {
         
         // 👇 Opciones recomendadas
         const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
-            header: 1,
-            cellDates: true, // fechas como Date cuando se puede
-            raw: false       // convierte números de fecha a algo más legible (pero igual pasará por parseDate)
-        });
+    header: 1,
+    cellDates: true,
+    raw: false
+});
+
+// Extract numeric values from Google Sheets formula strings
+for (let i = 1; i < jsonData.length; i++) {  // Skip header row
+    for (let j = 0; j < jsonData[i].length; j++) {
+        const cell = jsonData[i][j];
+        
+        // Check if it's a formula string from Google Sheets
+        if (typeof cell === 'string' && cell.includes('IFERROR') && cell.includes('__xludf.DUMMYFUNCTION')) {
+            // Extract the number from patterns like: =IFERROR(__xludf.DUMMYFUNCTION(...),45656.0)
+            const match = cell.match(/,(\d+\.?\d*)\)$/);
+            if (match) {
+                jsonData[i][j] = parseFloat(match[1]);
+            }
+        }
+    }
+}
         
         if (jsonData.length < 2) {
             hideLoading();
