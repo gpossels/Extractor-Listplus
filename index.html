@@ -2293,11 +2293,16 @@ function collectEventIdsForCell(period, group, selectedCategory, selectedSubcate
     
     const eventIds = [];
     const seenIds = new Set();
-    
     cleanedData.rows.forEach(row => {
-        const dateStr = row[dateColIndex];
-        const date = parseDate(dateStr);
-        const rowPeriod = getPeriodKey(date, periodType);
+    const dateStr = row[dateColIndex];
+    const eventId = row[columnIndices.eventId];
+    const date = parseDate(dateStr);
+    const rowPeriod = getPeriodKey(date, periodType);
+    
+    // Debug logging for specific Event IDs
+    if (eventId === 51166 || eventId === 48706) {
+        console.log(`Event ID ${eventId}: dateStr="${dateStr}", parsed date=${date}, period="${rowPeriod}"`);
+    }
         
         if (rowPeriod !== period) return;
         
