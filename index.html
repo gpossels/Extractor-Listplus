@@ -2212,25 +2212,40 @@ function getDenominatorValueForPeriod(period, denominatorColumnIndex) {
     // DEBUG: Log for specific period
     if (period.includes('2025-ISO43')) {
         console.log(`=== SEARCHING FOR ${period} ===`);
+        console.log(`Period type: ${periodType}`);
+        console.log(`Denominator column index: ${denominatorColumnIndex}`);
+        console.log(`Total denominator rows: ${denominatorsData.rows.length}`);
     }
     
+    let rowsChecked = 0;
     for (let row of denominatorsData.rows) {
         const fechaValue = row[denominatorsData.fechaIdx];
         if (!fechaValue) continue;
         
+        rowsChecked++;
+        
         const date = parseDate(fechaValue);
+        
+        // DEBUG: Log first 5 rows and any October 2025 rows
+        if (period.includes('2025-ISO43') && (rowsChecked <= 5 || (fechaValue.includes('/10/25')))) {
+            console.log(`  Row ${rowsChecked}: fechaValue="${fechaValue}" → date=${date} → type=${typeof date}`);
+        }
+        
         if (!date) continue;
         
         const rowPeriod = getPeriodKey(date, periodType);
         
-        // DEBUG: Log for ISO43
-        if (period.includes('2025-ISO43') && fechaValue.includes('20/10')) {
-            console.log(`  Row date: ${fechaValue} → Parsed: ${date} → Period: ${rowPeriod}`);
-            console.log(`  Match? ${rowPeriod === period}`);
+        // DEBUG: Log October rows with their period
+        if (period.includes('2025-ISO43') && fechaValue.includes('/10/25')) {
+            console.log(`    → rowPeriod="${rowPeriod}"`);
+            console.log(`    → Match? ${rowPeriod === period}`);
         }
         
         if (rowPeriod === period) {
             const denomValue = parseFloat(row[denominatorColumnIndex]);
+            if (period.includes('2025-ISO43')) {
+                console.log(`  ✓ MATCH FOUND! Value: ${denomValue}`);
+            }
             return { 
                 value: isNaN(denomValue) ? 0 : denomValue, 
                 found: true 
@@ -2238,9 +2253,12 @@ function getDenominatorValueForPeriod(period, denominatorColumnIndex) {
         }
     }
     
+    if (period.includes('2025-ISO43')) {
+        console.log(`  ✗ NO MATCH FOUND after checking ${rowsChecked} rows`);
+    }
+    
     return { value: 0, found: false };
-}
-function generateAnalysis() {
+}function generateAnalysis() {
     try {
         showLoading('Generando análisis...');
         
