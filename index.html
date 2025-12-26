@@ -1647,13 +1647,19 @@ function getPeriodKey(date, periodType) {
         case 'isoweek':
     const { year: isoYear, week: isoWeek } = getISOWeekNumber(date);
     
-    // Calculate the Monday and Sunday of this ISO week
+    // Find the Thursday of this ISO week (which determines the ISO year)
     const tempDate = new Date(date);
-    const dayNum = tempDate.getDay() || 7; // Make Sunday = 7
-    const monday = new Date(tempDate);
-    monday.setDate(tempDate.getDate() - dayNum + 1); // Go to Monday
+    const dayNum = tempDate.getDay() || 7;
+    const thursday = new Date(tempDate);
+    thursday.setDate(tempDate.getDate() + 4 - dayNum);
+    
+    // Calculate Monday of this ISO week
+    const monday = new Date(thursday);
+    monday.setDate(thursday.getDate() - 3); // Monday is 3 days before Thursday
+    
+    // Calculate Sunday of this ISO week
     const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6); // Sunday is 6 days after Monday
+    sunday.setDate(monday.getDate() + 6);
     
     // Format dates as D/M
     const mondayStr = `${monday.getDate()}/${monday.getMonth() + 1}`;
