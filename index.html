@@ -1671,33 +1671,37 @@ function getPeriodKey(date, periodType) {
     }
 }
 function sortPeriods(periods, periodType) {
-            return periods.sort((a, b) => {
-                const parseA = a.split('-');
-                const parseB = b.split('-');
-                
-                const yearA = parseInt(parseA[0]) || 0;
-                const yearB = parseInt(parseB[0]) || 0;
-                
-                if (yearA !== yearB) {
-                    return yearA - yearB;
-                }
-                
-                if (periodType === 'month' && parseA.length > 1) {
-                    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                    const monthA = monthNames.indexOf(parseA[1]);
-                    const monthB = monthNames.indexOf(parseB[1]);
-                    return monthA - monthB;
-                }
-                
-                if (parseA.length > 1) {
-                    const numA = parseInt(parseA[1].replace(/\D/g, '')) || 0;
-                    const numB = parseInt(parseB[1].replace(/\D/g, '')) || 0;
-                    return numA - numB;
-                }
-                
-                return 0;
-            });
+    return periods.sort((a, b) => {
+        // Remove newlines and anything after them for comparison
+        const cleanA = a.split('\n')[0];
+        const cleanB = b.split('\n')[0];
+        
+        const parseA = cleanA.split('-');
+        const parseB = cleanB.split('-');
+        
+        const yearA = parseInt(parseA[0]) || 0;
+        const yearB = parseInt(parseB[0]) || 0;
+        
+        if (yearA !== yearB) {
+            return yearA - yearB;
         }
+        
+        if (periodType === 'month' && parseA.length > 1) {
+            const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const monthA = monthNames.indexOf(parseA[1]);
+            const monthB = monthNames.indexOf(parseB[1]);
+            return monthA - monthB;
+        }
+        
+        if (parseA.length > 1) {
+            const numA = parseInt(parseA[1].replace(/\D/g, '')) || 0;
+            const numB = parseInt(parseB[1].replace(/\D/g, '')) || 0;
+            return numA - numB;
+        }
+        
+        return 0;
+    });
+}
 function toggleSection(sectionId) {
             const section = document.getElementById(sectionId);
             const icon = document.getElementById('icon-' + sectionId);
