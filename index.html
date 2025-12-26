@@ -2209,6 +2209,11 @@ function getDenominatorValueForPeriod(period, denominatorColumnIndex) {
     
     const periodType = getPeriodType();
     
+    // DEBUG: Log for specific period
+    if (period.includes('2025-ISO43')) {
+        console.log(`=== SEARCHING FOR ${period} ===`);
+    }
+    
     for (let row of denominatorsData.rows) {
         const fechaValue = row[denominatorsData.fechaIdx];
         if (!fechaValue) continue;
@@ -2217,6 +2222,12 @@ function getDenominatorValueForPeriod(period, denominatorColumnIndex) {
         if (!date) continue;
         
         const rowPeriod = getPeriodKey(date, periodType);
+        
+        // DEBUG: Log for ISO43
+        if (period.includes('2025-ISO43') && fechaValue.includes('20/10')) {
+            console.log(`  Row date: ${fechaValue} → Parsed: ${date} → Period: ${rowPeriod}`);
+            console.log(`  Match? ${rowPeriod === period}`);
+        }
         
         if (rowPeriod === period) {
             const denomValue = parseFloat(row[denominatorColumnIndex]);
@@ -2229,7 +2240,6 @@ function getDenominatorValueForPeriod(period, denominatorColumnIndex) {
     
     return { value: 0, found: false };
 }
-
 function generateAnalysis() {
     try {
         showLoading('Generando análisis...');
