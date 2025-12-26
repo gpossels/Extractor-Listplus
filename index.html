@@ -420,9 +420,13 @@
             Mes
         </label>
         <label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
-            <input type="radio" name="periodType" value="week" onclick="updatePeriodSlider()">
-            Semana
-        </label>
+    <input type="radio" name="periodType" value="week" onclick="updatePeriodSlider()">
+    Semana (civil)
+</label>
+<label style="font-weight:normal; display:flex; align-items:center; gap:6px;">
+    <input type="radio" name="periodType" value="isoweek" onclick="updatePeriodSlider()">
+    Semana ISO
+</label>
     </div>
 </div>
 
@@ -439,6 +443,22 @@
                         </label>
                     </div>
                 </div>
+                </div>
+                <div class="control-group">
+                    <label>Calendario a utilizar:</label>
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:5px;">
+                        <label style="font-weight:normal; display:flex; align-items:center; gap:8px;">
+                            <input type="radio" name="calendarType" value="civil" checked onchange="updatePeriodSlider()">
+                            Calendario Civil
+                        </label>
+                        <label style="font-weight:normal; display:flex; align-items:center; gap:8px;">
+                            <input type="radio" name="calendarType" value="iso" onchange="updatePeriodSlider()">
+                            Calendario ISO (basado en semanas)
+                        </label>
+                    </div>
+                </div>
+                
+                
                 <div style="background:#e7f3ff; padding:15px; border-radius:8px; border-left:4px solid #2196F3;">
                     <div style="font-weight:600; margin-bottom:8px; color:#2196F3;">Ventana de Períodos:</div>
                     <div id="selectedRangeText" style="font-size:14px; color:#333;">Seleccione el rango</div>
@@ -636,7 +656,10 @@
     // Por defecto, mes si por alguna razón no hay ninguno marcado
     return selected ? selected.value : 'month';
 }
-
+function getCalendarType() {
+    const selected = document.querySelector('input[name="calendarType"]:checked');
+    return selected ? selected.value : 'civil';
+}
         function handleFile(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -766,26 +789,23 @@
                 columnIndices = validation.indices;
                 const rows = jsonData.slice(1);
                 
-                const allRows = rows.filter(row => {
+   const allRows = rows.filter(row => {
     const id = row[columnIndices.eventId];
     return id; // Keep rows that have an ID
 });
 
-// Create a Set of unique event IDs for counting purposes
+// Keep all rows but track unique IDs for counting
 const uniqueIds = new Set();
-const uniqueRows = [];
 allRows.forEach(row => {
     const id = row[columnIndices.eventId];
-    if (!uniqueIds.has(id)) {
+    if (id) {
         uniqueIds.add(id);
-        uniqueRows.push(row);
     }
 });
 
 cleanedData = {
     headers: headers,
-    rows: allRows, // Store ALL rows (including duplicates)
-    uniqueRows: uniqueRows, // Store unique rows for analysis
+    rows: allRows, // Store ALL rows (no duplicate removal)
     uniqueIds: uniqueIds // Store unique IDs for counting
 };
                 const uploadArea = document.getElementById('uploadArea');
@@ -800,8 +820,8 @@ info.innerHTML = `
     <strong>Información del archivo:</strong><br>
     • Filas totales: ${allRows.length}<br>
     • IDs únicos: ${uniqueIds.size}<br>
-    • Duplicados detectados: ${duplicateCount}<br>
-    <small>(Los duplicados se mantienen para análisis de incumplimientos)</small>
+    • Filas duplicadas: ${duplicateCount}<br>
+    <small>(Todas las filas se mantienen; conteo usa solo IDs únicos)</small>
 `;
                 
                 
@@ -1469,14 +1489,14 @@ function parseDate(dateStr) {
     if (dateStr == null || dateStr === '') return null;
 
     try {
-        // 1) Ya es Date
+        // 1) Already is Date object
         if (dateStr instanceof Date && !isNaN(dateStr)) {
             return new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate());
         }
 
-        // 2) Es número → serial de Excel
+        // 2) Is number → Excel serial date
         if (typeof dateStr === 'number') {
-            const excelEpoch = new Date(1899, 11, 30); // 1899-12-30
+            const excelEpoch = new Date(1899, 11, 30);
             const ms = excelEpoch.getTime() + dateStr * 86400000;
             const d = new Date(ms);
             if (!isNaN(d.getTime())) {
@@ -1484,26 +1504,25 @@ function parseDate(dateStr) {
             }
         }
 
-        // 3) Texto DD-MM-AAAA ó DD/MM/AAAA ó DD-MM-AA ó DD/MM/AA
-const dateString = String(dateStr).trim();
-const match = dateString.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
-if (match) {
-    const day = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10) - 1;
-    let year = parseInt(match[3], 10);
-    
-    // Si el año tiene 2 dígitos, convertir a 4 dígitos
-    if (year < 100) {
-        year += (year < 50) ? 2000 : 1900;  // 00-49 -> 2000-2049, 50-99 -> 1950-1999
-    }
+        // 3) Text in DD-MM-YYYY or DD/MM/YYYY format (CIVIL CALENDAR)
+        const dateString = String(dateStr).trim();
+        const match = dateString.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
+        if (match) {
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10) - 1; // JavaScript uses 0-indexed months
+            let year = parseInt(match[3], 10);
+            
+            if (year < 100) {
+                year += (year < 50) ? 2000 : 1900;
+            }
 
-    const d = new Date(year, month, day);
-    if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
-        return d;
-    }
-}
+            const d = new Date(year, month, day);
+            if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+                return d;
+            }
+        }
 
-        // 4) Último intento con new Date
+        // 4) Last attempt with generic Date parsing
         const dGeneric = new Date(dateString);
         if (!isNaN(dGeneric.getTime())) {
             return new Date(dGeneric.getFullYear(), dGeneric.getMonth(), dGeneric.getDate());
@@ -1515,7 +1534,6 @@ if (match) {
         return null;
     }
 }
-
 function getWeekNumber(date) {
             const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
             const dayNum = d.getDay() || 7;
@@ -1525,36 +1543,62 @@ function getWeekNumber(date) {
             return { year: d.getFullYear(), week: weekNo };
         }
 
+        function getISOWeekNumber(date) {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    // Set to nearest Thursday (current date + 4 - current day number)
+    // Make Sunday's day number 7
+    const dayNum = d.getDay() || 7;
+    d.setDate(d.getDate() + 4 - dayNum);
+    // Get first day of year
+    const yearStart = new Date(d.getFullYear(), 0, 1);
+    // Calculate full weeks to nearest Thursday
+    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    // Return ISO week year (may differ from calendar year)
+    return { year: d.getFullYear(), week: weekNo };
+}
 
 function getPeriodKey(date, periodType) {
-            if (!date) return 'Sin fecha';
-            
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            
-            switch(periodType) {
-                case 'year':
-                    return `${year}`;
-                case 'semester':
-                    const semester = month <= 6 ? 1 : 2;
-                    return `${year}-S${semester}`;
-                case 'quarter4':
-                    const quarter4 = Math.ceil(month / 4);
-                    return `${year}-C${quarter4}`;
-                case 'quarter':
-                    const quarter = Math.ceil(month / 3);
-                    return `${year}-T${quarter}`;
-                case 'month':
-                    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                    return `${year}-${monthNames[month - 1]}`;
-                case 'week':
-                    const { year: weekYear, week } = getWeekNumber(date);
-                    return `${weekYear}-Sem${String(week).padStart(2, '0')}`;
-                default:
-                    return 'Desconocido';
-            }
-        }
-
+    if (!date) return 'Sin fecha';
+    
+    const calendarType = getCalendarType();
+    
+    // For ISO calendar, align date to its ISO week's Thursday to determine the correct period
+    let workingDate = date;
+    if (calendarType === 'iso') {
+        const dayNum = date.getDay() || 7; // Make Sunday = 7
+        const thursday = new Date(date);
+        thursday.setDate(date.getDate() + 4 - dayNum); // Get Thursday of the ISO week
+        workingDate = thursday;
+    }
+    
+    const year = workingDate.getFullYear();
+    const month = workingDate.getMonth() + 1;
+    
+    switch(periodType) {
+        case 'year':
+            return `${year}${calendarType === 'iso' ? '-ISO' : ''}`;
+        case 'semester':
+            const semester = month <= 6 ? 1 : 2;
+            return `${year}-S${semester}${calendarType === 'iso' ? '-ISO' : ''}`;
+        case 'quarter4':
+            const quarter4 = Math.ceil(month / 4);
+            return `${year}-C${quarter4}${calendarType === 'iso' ? '-ISO' : ''}`;
+        case 'quarter':
+            const quarter = Math.ceil(month / 3);
+            return `${year}-T${quarter}${calendarType === 'iso' ? '-ISO' : ''}`;
+        case 'month':
+            const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            return `${year}-${monthNames[month - 1]}${calendarType === 'iso' ? '-ISO' : ''}`;
+        case 'week':
+            const { year: weekYear, week } = getWeekNumber(date);
+            return `${weekYear}-Sem${String(week).padStart(2, '0')}`;
+        case 'isoweek':
+            const { year: isoYear, week: isoWeek } = getISOWeekNumber(date);
+            return `${isoYear}-ISO${String(isoWeek).padStart(2, '0')}`;
+        default:
+            return 'Desconocido';
+    }
+}
 function sortPeriods(periods, periodType) {
             return periods.sort((a, b) => {
                 const parseA = a.split('-');
@@ -2196,21 +2240,27 @@ soloServices.forEach(solo => {
             ratesData.groups.forEach(group => {
                 let eventCount = 0;
                 
-                cleanedData.uniqueRows.forEach(row => {
-                    const dateStr = row[dateColIndex];
-                    const date = parseDate(dateStr);
-                    const rowPeriod = getPeriodKey(date, periodType);
-                    
-                    if (rowPeriod !== period) return;
-                    
-                    const service = String(row[serviceCol] || '').trim();
-                    if (!group.services.includes(service)) return;
-                    
-                    const categoryValue = String(row[categoryColIndex] || 'Sin información').trim() || 'Sin información';
-                    if (selectedSubcategories.includes(categoryValue)) {
-                        eventCount++;
-                    }
-                });
+                const seenIdsThisPeriod = new Set();
+
+cleanedData.rows.forEach(row => {
+    const dateStr = row[dateColIndex];
+    const date = parseDate(dateStr);
+    const rowPeriod = getPeriodKey(date, periodType);
+    
+    if (rowPeriod !== period) return;
+    
+    const service = String(row[serviceCol] || '').trim();
+    if (!group.services.includes(service)) return;
+    
+    const categoryValue = String(row[categoryColIndex] || 'Sin información').trim() || 'Sin información';
+    if (selectedSubcategories.includes(categoryValue)) {
+        const eventId = row[columnIndices.eventId];
+        if (eventId && !seenIdsThisPeriod.has(eventId)) {
+            seenIdsThisPeriod.add(eventId);
+            eventCount++;
+        }
+    }
+});
                 
                const denomResult = getDenominatorValueForPeriod(period, group.denominatorColumn);
 let rate = null;
@@ -2234,6 +2284,54 @@ group.periodData[period] = {
         showError(`Error al generar análisis: ${error.message}`);
     }
 }
+
+function collectEventIdsForCell(period, group, selectedCategory, selectedSubcategories) {
+    const periodType = getPeriodType();
+    const dateType = document.querySelector('input[name="dateType"]:checked').value;
+    const dateColIndex = dateType === 'occurrence' ? columnIndices.occurrenceDate : columnIndices.notificationDate;
+    const serviceCol = columnIndices.serviceVerified;
+    const categoryColIndex = getCategoryColumnIndex(selectedCategory);
+    
+    const eventIds = [];
+    const seenIds = new Set();
+    
+    cleanedData.rows.forEach(row => {
+        const dateStr = row[dateColIndex];
+        const date = parseDate(dateStr);
+        const rowPeriod = getPeriodKey(date, periodType);
+        
+        if (rowPeriod !== period) return;
+        
+        const service = String(row[serviceCol] || '').trim();
+        if (!group.services.includes(service)) return;
+        
+        const categoryValue = String(row[categoryColIndex] || 'Sin información').trim() || 'Sin información';
+        if (selectedSubcategories.includes(categoryValue)) {
+            const eventId = row[columnIndices.eventId];
+            if (eventId && !seenIds.has(eventId)) {
+                seenIds.add(eventId);
+                eventIds.push(eventId);
+            }
+        }
+    });
+    
+    return eventIds.sort((a, b) => a - b);
+}
+
+function downloadEventIds(eventIds, period, groupName) {
+    const text = eventIds.join('\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `EventIDs_${groupName}_${period}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showCopiedNotification(`Descargando ${eventIds.length} IDs`);
+}
+        
         function displayRatesResults(ratesData) {
     const { periods, groups, selectedCategory, selectedSubcategories } = ratesData;
     
@@ -2290,6 +2388,9 @@ groups.forEach(group => {
         
        groups.forEach(group => {
     const data = group.periodData[period];
+    const eventIds = collectEventIdsForCell(period, group, ratesData.selectedCategory, ratesData.selectedSubcategories);
+    data.eventIds = eventIds; // Store for later use
+    
     let rateDisplay;
     
     if (group.denominatorColumn === '') {
@@ -2305,9 +2406,11 @@ groups.forEach(group => {
         // No denominator row found for this period - show count in red brackets
         rateDisplay = `<span style="color:#dc3545;" title="Sin datos de denominador para este período">[${data.count}]</span>`;
     }
-            
-            tableHtml += `<td style="text-align:center;" data-rates-col="${group.id}">${rateDisplay}</td>`;
-        });
+    
+    const escapedPeriod = String(period).replace(/'/g, "\\'");
+    const escapedGroupName = String(group.name).replace(/'/g, "\\'");
+    tableHtml += `<td style="text-align:center; cursor:pointer;" data-rates-col="${group.id}" onclick="downloadEventIds(${JSON.stringify(eventIds)}, '${escapedPeriod}', '${escapedGroupName}')" title="Click para descargar IDs (${eventIds.length} casos)">${rateDisplay}</td>`;
+});
         
         tableHtml += `</tr>`;
     });
