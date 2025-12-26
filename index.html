@@ -2330,6 +2330,20 @@ function downloadEventIds(eventIds, period, groupName) {
     URL.revokeObjectURL(url);
     showCopiedNotification(`Descargando ${eventIds.length} IDs`);
 }
+
+        function downloadEventIdsFromCell(cellElement) {
+    const eventIdsStr = cellElement.getAttribute('data-event-ids');
+    const period = cellElement.getAttribute('data-period');
+    const groupName = cellElement.getAttribute('data-group-name');
+    
+    if (!eventIdsStr) {
+        showCopiedNotification('No hay IDs para descargar');
+        return;
+    }
+    
+    const eventIds = eventIdsStr.split(',').map(id => id.trim()).filter(id => id);
+    downloadEventIds(eventIds, period, groupName);
+}
         
         function displayRatesResults(ratesData) {
     const { periods, groups, selectedCategory, selectedSubcategories } = ratesData;
@@ -2406,9 +2420,8 @@ groups.forEach(group => {
         rateDisplay = `<span style="color:#dc3545;" title="Sin datos de denominador para este período">[${data.count}]</span>`;
     }
     
-    const escapedPeriod = String(period).replace(/'/g, "\\'");
-    const escapedGroupName = String(group.name).replace(/'/g, "\\'");
-    tableHtml += `<td style="text-align:center; cursor:pointer;" data-rates-col="${group.id}" onclick="downloadEventIds(${JSON.stringify(eventIds)}, '${escapedPeriod}', '${escapedGroupName}')" title="Click para descargar IDs (${eventIds.length} casos)">${rateDisplay}</td>`;
+    const cellId = `cell-${period}-${group.id}`.replace(/[^a-zA-Z0-9-]/g, '_');
+    tableHtml += `<td id="${cellId}" style="text-align:center; cursor:pointer;" data-rates-col="${group.id}" data-event-ids="${eventIds.join(',')}" data-period="${period}" data-group-name="${group.name}" onclick="downloadEventIdsFromCell(this)" title="Click para descargar IDs (${eventIds.length} casos)">${rateDisplay}</td>`;
 });
         
         tableHtml += `</tr>`;
