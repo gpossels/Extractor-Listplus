@@ -1645,8 +1645,21 @@ function getPeriodKey(date, periodType) {
             const { year: weekYear, week } = getWeekNumber(date);
             return `${weekYear}-Sem${String(week).padStart(2, '0')}`;
         case 'isoweek':
-            const { year: isoYear, week: isoWeek } = getISOWeekNumber(date);
-            return `${isoYear}-ISO${String(isoWeek).padStart(2, '0')}`;
+    const { year: isoYear, week: isoWeek } = getISOWeekNumber(date);
+    
+    // Calculate the Monday and Sunday of this ISO week
+    const tempDate = new Date(date);
+    const dayNum = tempDate.getDay() || 7; // Make Sunday = 7
+    const monday = new Date(tempDate);
+    monday.setDate(tempDate.getDate() - dayNum + 1); // Go to Monday
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6); // Sunday is 6 days after Monday
+    
+    // Format dates as D/M
+    const mondayStr = `${monday.getDate()}/${monday.getMonth() + 1}`;
+    const sundayStr = `${sunday.getDate()}/${sunday.getMonth() + 1}`;
+    
+    return `${isoYear}-ISO${String(isoWeek).padStart(2, '0')}\n(${mondayStr} - ${sundayStr})`;
         default:
             return 'Desconocido';
     }
