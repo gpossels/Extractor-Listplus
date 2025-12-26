@@ -690,6 +690,27 @@ function getCalendarType() {
             reader.readAsArrayBuffer(file);
         }
 
+function updateCalendarToggleVisibility() {
+    const periodType = getPeriodType();
+    const calendarToggle = document.querySelector('.control-group:has(input[name="calendarType"])');
+    
+    // Hide calendar toggle for week-based periods
+    if (periodType === 'week' || periodType === 'isoweek') {
+        if (calendarToggle) {
+            calendarToggle.style.opacity = '0.5';
+            calendarToggle.style.pointerEvents = 'none';
+            calendarToggle.title = 'El calendario no afecta análisis por semanas';
+        }
+    } else {
+        if (calendarToggle) {
+            calendarToggle.style.opacity = '1';
+            calendarToggle.style.pointerEvents = 'auto';
+            calendarToggle.title = '';
+        }
+    }
+}
+
+        
         function findColumnIndex(headers, possibleNames) {
             for (let i = 0; i < headers.length; i++) {
                 const header = String(headers[i]).trim().toLowerCase();
@@ -901,7 +922,7 @@ info.innerHTML = `
         
         function updatePeriodSlider() {
             if (!cleanedData) return;
-            
+            updateCalendarToggleVisibility();
             buildAllPeriods();
             
             const startSlider = document.getElementById('periodSliderStart');
